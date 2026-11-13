@@ -1,0 +1,2207 @@
+openapi: 3.0.3
+info:
+  title: XeuySil API - Console web (agents, modérateurs, administrateurs)
+  version: 0.1.0-draft
+  description: 'Contrat de la console web d''administration.
+
+    Dérivé du contrat complet ; ne contient que les routes utilisées par l''équipe XeuySil.
+
+
+    **Conventions**
+
+    - Toutes les routes sont sous `/v1`. Dates ISO 8601, heures `HH:mm`, fuseau Africa/Dakar.
+
+    - `Authorization: Bearer <accessToken>` ; les comptes de l''équipe sont créés par un administrateur
+    (pas d''inscription libre).
+
+    - `X-Correlation-Id` accepté et toujours renvoyé ; `Idempotency-Key` sur les POST de création.
+
+    - Erreurs `application/problem+json` avec un `code` stable.
+
+    - Listes paginées : `page` (dès 1) et `taille` (défaut 20, max 100).
+
+    - Un agent agit au nom d''un travailleur ou d''un recruteur : l''action est tracée à son nom (RB-16)
+    avec le canal APPEL.
+
+    - Les numéros d''autrui restent masqués tant que la candidature n''est pas CONFIRMEE (RB-17), sauf
+    pour l''agent et l''administrateur dans leur périmètre.
+
+    '
+servers:
+- url: http://localhost:4011/v1
+  description: Mock Prism (console web)
+- url: http://localhost:8080/v1
+  description: Passerelle locale (docker compose)
+tags:
+- name: Auth
+- name: Profil
+- name: Référentiels
+- name: Missions
+- name: Candidatures
+- name: Disponibilités
+- name: Évaluations
+- name: Assistance (agent)
+- name: Administration
+- name: Santé
+security:
+- bearerAuth: []
+paths:
+  /auth/otp/demande:
+    post:
+      tags:
+      - Auth
+      summary: Demander un code OTP par téléphone (connexion ou inscription)
+      security: []
+      x-roles:
+      - public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - telephone
+              properties:
+                telephone:
+                  $ref: '#/components/schemas/Telephone'
+      responses:
+        '204':
+          description: Code envoyé
+        '422':
+          $ref: '#/components/responses/Validation'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+  /auth/otp/verification:
+    post:
+      tags:
+      - Auth
+      summary: Vérifier le code OTP et obtenir les jetons (compte existant de l'équipe)
+      description: 'Le compte doit déjà exister (créé par un administrateur) : pas d''inscription ici.
+        Voir la décision en suspens sur un éventuel mot de passe.'
+      security: []
+      x-roles:
+      - public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - telephone
+              - code
+              properties:
+                telephone:
+                  $ref: '#/components/schemas/Telephone'
+                code:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: Connexion ou inscription réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jetons'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '422':
+          $ref: '#/components/responses/Validation'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+  /auth/rafraichissement:
+    post:
+      tags:
+      - Auth
+      summary: Renouveler le jeton d'accès
+      security: []
+      x-roles:
+      - public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Nouveaux jetons (rotation du refresh token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jetons'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+  /auth/deconnexion:
+    post:
+      tags:
+      - Auth
+      summary: Révoquer le jeton de rafraîchissement
+      x-roles:
+      - tous
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '204':
+          description: Déconnecté
+  /me:
+    get:
+      tags:
+      - Profil
+      summary: Mon profil
+      x-roles:
+      - tous
+      responses:
+        '200':
+          description: Profil de l'utilisateur connecté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profil'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+    patch:
+      tags:
+      - Profil
+      summary: Modifier mon profil
+      x-roles:
+      - tous
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfilModification'
+      responses:
+        '200':
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profil'
+        '422':
+          $ref: '#/components/responses/Validation'
+  /me/consentements:
+    get:
+      tags:
+      - Profil
+      summary: Mes consentements par canal
+      x-roles:
+      - tous
+      responses:
+        '200':
+          description: Liste des consentements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Consentement'
+    put:
+      tags:
+      - Profil
+      summary: Accorder ou retirer un consentement (désinscription possible à tout moment)
+      x-roles:
+      - tous
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentementEntree'
+      responses:
+        '200':
+          description: Consentement enregistré (tracé avec date et auteur)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Consentement'
+  /metiers:
+    get:
+      tags:
+      - Référentiels
+      summary: Liste des métiers actifs
+      x-roles:
+      - tous
+      parameters:
+      - name: categorie
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Métiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Metier'
+    post:
+      tags:
+      - Administration
+      summary: Créer un métier
+      x-roles:
+      - ADMINISTRATEUR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetierEntree'
+      responses:
+        '201':
+          description: Métier créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metier'
+        '422':
+          $ref: '#/components/responses/Validation'
+  /metiers/{id}:
+    patch:
+      tags:
+      - Administration
+      summary: Modifier ou désactiver un métier
+      x-roles:
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetierEntree'
+      responses:
+        '200':
+          description: Métier mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metier'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+  /zones:
+    get:
+      tags:
+      - Référentiels
+      summary: Liste des zones (hiérarchie région > département > commune > quartier)
+      x-roles:
+      - tous
+      parameters:
+      - name: parentId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: niveau
+        in: query
+        schema:
+          $ref: '#/components/schemas/NiveauZone'
+      responses:
+        '200':
+          description: Zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Zone'
+    post:
+      tags:
+      - Administration
+      summary: Créer une zone
+      x-roles:
+      - ADMINISTRATEUR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneEntree'
+      responses:
+        '201':
+          description: Zone créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        '422':
+          $ref: '#/components/responses/Validation'
+  /missions:
+    get:
+      tags:
+      - Missions
+      summary: Lister des missions
+      description: 'Comportement selon le rôle et `portee` :
+
+        - TRAVAILLEUR, `portee=pertinentes` : missions compatibles avec son profil (métier, zone, disponibilité).
+
+        - RECRUTEUR, `portee=miennes` : ses propres missions.
+
+        - Agent, modérateur, administrateur : toutes les missions, filtrables.
+
+        '
+      x-roles:
+      - AGENT
+      - MODERATEUR
+      - ADMINISTRATEUR
+      parameters:
+      - name: portee
+        in: query
+        schema:
+          type: string
+          enum:
+          - pertinentes
+          - miennes
+          - toutes
+          default: pertinentes
+      - name: statut
+        in: query
+        schema:
+          $ref: '#/components/schemas/StatutMission'
+      - name: metierId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: zoneId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: dateDebut
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateFin
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: urgente
+        in: query
+        schema:
+          type: boolean
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page de missions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageMissions'
+    post:
+      tags:
+      - Missions
+      summary: Publier une mission
+      description: 'Valide les règles (RB-01 durée d''au plus une journée, RB-19, cohérence du type d''horaire),
+
+        enregistre en PUBLIEE (ou BROUILLON), puis déclenche le matching.
+
+        Un agent peut publier pour un recruteur via `recruteurId`.
+
+        '
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionCreation'
+      responses:
+        '201':
+          description: Mission créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+        '422':
+          $ref: '#/components/responses/Validation'
+  /missions/{id}:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+      - Missions
+      summary: Détail d'une mission
+      x-roles:
+      - AGENT
+      - MODERATEUR
+      - ADMINISTRATEUR
+      responses:
+        '200':
+          description: Mission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    patch:
+      tags:
+      - Missions
+      summary: Modifier une mission (tant qu'elle n'est pas EN_COURS)
+      x-roles:
+      - AGENT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionModification'
+      responses:
+        '200':
+          description: Mission mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '422':
+          $ref: '#/components/responses/Validation'
+  /missions/{id}/annulation:
+    post:
+      tags:
+      - Missions
+      summary: Annuler une mission (les candidats confirmés sont prévenus)
+      x-roles:
+      - AGENT
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motif:
+                  type: string
+      responses:
+        '200':
+          description: Mission ANNULEE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+        '409':
+          $ref: '#/components/responses/Conflit'
+  /missions/{id}/duplication:
+    post:
+      tags:
+      - Missions
+      summary: Dupliquer une mission avec une nouvelle date
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - date
+              properties:
+                date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Nouvelle mission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+  /missions/{id}/suspension:
+    post:
+      tags:
+      - Administration
+      summary: Suspendre une mission (modération)
+      x-roles:
+      - MODERATEUR
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - motif
+              properties:
+                motif:
+                  type: string
+      responses:
+        '200':
+          description: Mission SUSPENDUE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+    delete:
+      tags:
+      - Administration
+      summary: Lever la suspension
+      x-roles:
+      - MODERATEUR
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Mission réactivée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+  /missions/{id}/cloture:
+    post:
+      tags:
+      - Missions
+      summary: Clôturer la mission et saisir les présences
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - presences
+              properties:
+                presences:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - candidatureId
+                    - presence
+                    properties:
+                      candidatureId:
+                        type: string
+                        format: uuid
+                      presence:
+                        type: string
+                        enum:
+                        - PRESENT
+                        - ABSENT
+      responses:
+        '200':
+          description: Mission TERMINEE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+        '409':
+          $ref: '#/components/responses/Conflit'
+  /missions/{id}/candidatures:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    get:
+      tags:
+      - Candidatures
+      summary: Candidatures d'une mission
+      x-roles:
+      - AGENT
+      - MODERATEUR
+      - ADMINISTRATEUR
+      parameters:
+      - name: statut
+        in: query
+        schema:
+          $ref: '#/components/schemas/StatutCandidature'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page de candidatures
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageCandidatures'
+  /candidatures/{id}:
+    get:
+      tags:
+      - Candidatures
+      summary: Détail d'une candidature
+      x-roles:
+      - AGENT
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Candidature
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidature'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+  /candidatures/{id}/reponse:
+    post:
+      tags:
+      - Candidatures
+      summary: Répondre OUI ou NON à une proposition (PROPOSEE)
+      description: Saisie par l'agent d'une réponse reçue par appel. L'action est tracée à son nom (RB-16).
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reponse
+              - canal
+              properties:
+                reponse:
+                  type: string
+                  enum:
+                  - OUI
+                  - NON
+                canal:
+                  type: string
+                  enum:
+                  - APPEL
+                  - SMS
+      responses:
+        '200':
+          description: Candidature mise à jour (INTERESSE, REFUSEE ou CONFIRMEE selon le mode)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidature'
+        '409':
+          $ref: '#/components/responses/Conflit'
+  /candidatures/{id}/selection:
+    post:
+      tags:
+      - Candidatures
+      summary: Sélectionner un candidat (INTERESSE vers SELECTIONNEE)
+      description: Échoue en 409 CAPACITE_ATTEINTE s'il n'y a plus de place libre. Un délai de réponse
+        démarre (RB-13).
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Candidature SELECTIONNEE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidature'
+        '409':
+          $ref: '#/components/responses/Conflit'
+  /candidatures/{id}/refus:
+    post:
+      tags:
+      - Candidatures
+      summary: Refuser un candidat
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Candidature REFUSEE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidature'
+  /candidatures/{id}/confirmation:
+    post:
+      tags:
+      - Candidatures
+      summary: Confirmer sa participation (SELECTIONNEE vers CONFIRMEE)
+      description: 'Réserve la place avec verrou transactionnel (RB-05 : jamais plus de confirmés que
+        de postes).
+
+        En cas d''échec, 409 CAPACITE_ATTEINTE (la candidature passe en LISTE_ATTENTE) ou PROPOSITION_EXPIREE.
+
+        '
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Candidature CONFIRMEE, contacts révélés
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidature'
+        '409':
+          $ref: '#/components/responses/Conflit'
+  /candidatures/{id}/desistement:
+    post:
+      tags:
+      - Candidatures
+      summary: Se désister (la place est libérée, un remplaçant est recherché, RB-12)
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motif:
+                  type: string
+      responses:
+        '200':
+          description: Candidature ANNULEE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidature'
+        '409':
+          $ref: '#/components/responses/Conflit'
+  /disponibilites:
+    get:
+      tags:
+      - Disponibilités
+      summary: Mes disponibilités
+      x-roles:
+      - AGENT
+      parameters:
+      - name: dateDebut
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateFin
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: travailleurId
+        in: query
+        description: Réservé à l'agent
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Disponibilités
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Disponibilite'
+    post:
+      tags:
+      - Disponibilités
+      summary: Déclarer une disponibilité
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisponibiliteEntree'
+      responses:
+        '201':
+          description: Disponibilité créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Disponibilite'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '422':
+          $ref: '#/components/responses/Validation'
+  /disponibilites/{id}:
+    delete:
+      tags:
+      - Disponibilités
+      summary: Retirer une disponibilité
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Supprimée
+        '404':
+          $ref: '#/components/responses/Introuvable'
+  /utilisateurs/{id}/evaluations:
+    get:
+      tags:
+      - Évaluations
+      summary: Évaluations reçues par un utilisateur
+      x-roles:
+      - AGENT
+      - MODERATEUR
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Évaluations et moyenne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  moyenne:
+                    type: number
+                    format: float
+                    nullable: true
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Evaluation'
+  /agent/travailleurs:
+    post:
+      tags:
+      - Assistance (agent)
+      summary: Inscrire un travailleur avec son accord (consentement enregistré)
+      x-roles:
+      - AGENT
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - telephone
+              - nom
+              - consentements
+              properties:
+                telephone:
+                  $ref: '#/components/schemas/Telephone'
+                nom:
+                  type: string
+                langue:
+                  type: string
+                  example: wo
+                metiers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      metierId:
+                        type: string
+                        format: uuid
+                      experienceAnnees:
+                        type: integer
+                zoneIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                consentements:
+                  type: array
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/ConsentementEntree'
+      responses:
+        '201':
+          description: Travailleur créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profil'
+        '409':
+          $ref: '#/components/responses/Conflit'
+  /agent/utilisateurs:
+    get:
+      tags:
+      - Assistance (agent)
+      summary: Rechercher un travailleur ou un recruteur (par nom ou téléphone)
+      x-roles:
+      - AGENT
+      - ADMINISTRATEUR
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 3
+      responses:
+        '200':
+          description: Résultats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Profil'
+  /agent/reponses-incomprises:
+    get:
+      tags:
+      - Assistance (agent)
+      summary: Réponses WhatsApp non comprises à traiter à la main
+      x-roles:
+      - AGENT
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page de réponses incomprises
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReponseIncomprise'
+  /agent/reponses-incomprises/{id}/traitement:
+    post:
+      tags:
+      - Assistance (agent)
+      summary: Traiter une réponse incomprise
+      x-roles:
+      - AGENT
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                  - OUI
+                  - NON
+                  - IGNORER
+      responses:
+        '200':
+          description: Traitée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReponseIncomprise'
+  /admin/tableau-de-bord:
+    get:
+      tags:
+      - Administration
+      summary: Indicateurs de réussite
+      x-roles:
+      - ADMINISTRATEUR
+      parameters:
+      - name: dateDebut
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateFin
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: Indicateurs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableauDeBord'
+  /admin/utilisateurs:
+    get:
+      tags:
+      - Administration
+      summary: Lister les comptes
+      x-roles:
+      - ADMINISTRATEUR
+      - MODERATEUR
+      parameters:
+      - name: role
+        in: query
+        schema:
+          $ref: '#/components/schemas/Role'
+      - name: statut
+        in: query
+        schema:
+          $ref: '#/components/schemas/StatutCompte'
+      - name: q
+        in: query
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page de comptes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Profil'
+  /admin/utilisateurs/{id}/statut:
+    patch:
+      tags:
+      - Administration
+      summary: Suspendre, réactiver ou supprimer un compte
+      x-roles:
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - statut
+              properties:
+                statut:
+                  $ref: '#/components/schemas/StatutCompte'
+                motif:
+                  type: string
+      responses:
+        '200':
+          description: Compte mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profil'
+  /admin/agents:
+    post:
+      tags:
+      - Administration
+      summary: Créer un compte agent, modérateur ou administrateur
+      x-roles:
+      - ADMINISTRATEUR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - telephone
+              - nom
+              - role
+              properties:
+                telephone:
+                  $ref: '#/components/schemas/Telephone'
+                nom:
+                  type: string
+                role:
+                  type: string
+                  enum:
+                  - AGENT
+                  - MODERATEUR
+                  - ADMINISTRATEUR
+                perimetre:
+                  type: string
+                  description: Pour un agent
+      responses:
+        '201':
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profil'
+  /admin/signalements:
+    get:
+      tags:
+      - Administration
+      summary: Lister les signalements
+      x-roles:
+      - MODERATEUR
+      - ADMINISTRATEUR
+      parameters:
+      - name: statut
+        in: query
+        schema:
+          $ref: '#/components/schemas/StatutSignalement'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page de signalements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Signalement'
+  /admin/signalements/{id}:
+    patch:
+      tags:
+      - Administration
+      summary: Traiter un signalement
+      x-roles:
+      - MODERATEUR
+      - ADMINISTRATEUR
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - statut
+              properties:
+                statut:
+                  $ref: '#/components/schemas/StatutSignalement'
+                decision:
+                  type: string
+      responses:
+        '200':
+          description: Signalement mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Signalement'
+  /admin/audit:
+    get:
+      tags:
+      - Administration
+      summary: Journal d'audit (actions importantes, RB-08)
+      x-roles:
+      - ADMINISTRATEUR
+      parameters:
+      - name: acteurId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - name: objetType
+        in: query
+        schema:
+          type: string
+      - name: objetId
+        in: query
+        schema:
+          type: string
+      - name: dateDebut
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateFin
+        in: query
+        schema:
+          type: string
+          format: date
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page d'entrées d'audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EntreeAudit'
+  /admin/notifications:
+    get:
+      tags:
+      - Administration
+      summary: Suivre les statuts des messages (EN_FILE, ENVOYE, LIVRE, LU, ECHEC)
+      x-roles:
+      - ADMINISTRATEUR
+      parameters:
+      - name: statut
+        in: query
+        schema:
+          $ref: '#/components/schemas/StatutMessage'
+      - name: canal
+        in: query
+        schema:
+          $ref: '#/components/schemas/Canal'
+      - name: missionId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page de notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+  /health:
+    get:
+      tags:
+      - Santé
+      summary: Le service répond (liveness)
+      security: []
+      x-roles:
+      - public
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /ready:
+    get:
+      tags:
+      - Santé
+      summary: Le service est prêt (base de données et Redis joignables)
+      security: []
+      x-roles:
+      - public
+      responses:
+        '200':
+          description: Prêt
+        '503':
+          description: Pas prêt
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Taille:
+      name: taille
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: UUID généré par le client ; rejouer la même requête renvoie le même résultat sans doublon.
+      schema:
+        type: string
+        format: uuid
+  responses:
+    NonAuthentifie:
+      description: Jeton absent, expiré ou code invalide
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+    Introuvable:
+      description: Ressource introuvable
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+    Validation:
+      description: Données invalides
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+    Conflit:
+      description: Conflit avec une règle métier (voir `code`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+    TropDeRequetes:
+      description: Limitation de débit atteinte
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Erreur'
+  schemas:
+    Erreur:
+      type: object
+      required:
+      - status
+      - code
+      - title
+      properties:
+        status:
+          type: integer
+          example: 409
+        code:
+          type: string
+          description: Code stable à utiliser côté client pour choisir le message affiché
+          enum:
+          - VALIDATION
+          - NON_AUTHENTIFIE
+          - OTP_INVALIDE
+          - INTERDIT
+          - INTROUVABLE
+          - CAPACITE_ATTEINTE
+          - CHEVAUCHEMENT
+          - MISSION_INDISPONIBLE
+          - PROPOSITION_EXPIREE
+          - TRANSITION_INVALIDE
+          - DOUBLON
+          - TROP_DE_REQUETES
+        title:
+          type: string
+          example: Capacité atteinte
+        detail:
+          type: string
+          example: Tous les postes de cette mission sont pourvus.
+        correlationId:
+          type: string
+        errors:
+          type: array
+          description: Détail par champ pour les erreurs 422
+          items:
+            type: object
+            properties:
+              champ:
+                type: string
+                example: remunerationFcfa
+              message:
+                type: string
+    Telephone:
+      type: string
+      description: Format international E.164
+      example: '+221771234567'
+      pattern: ^\+[1-9][0-9]{7,14}$
+    Role:
+      type: string
+      enum:
+      - AGENT
+      - MODERATEUR
+      - ADMINISTRATEUR
+      - TRAVAILLEUR
+      - RECRUTEUR
+    StatutCompte:
+      type: string
+      enum:
+      - ACTIF
+      - SUSPENDU
+      - SUPPRIME
+    TypeRecruteur:
+      type: string
+      enum:
+      - PARTICULIER
+      - ENTREPRISE
+    TypeHoraire:
+      type: string
+      enum:
+      - TRAVAIL_JOURNALIER
+      - DEMI_JOURNEE
+      - CRENEAU_PRECIS
+    ModeAttribution:
+      type: string
+      enum:
+      - PREMIER_ARRIVE
+      - SELECTION
+    StatutMission:
+      type: string
+      enum:
+      - BROUILLON
+      - PUBLIEE
+      - PARTIELLEMENT_POURVUE
+      - POURVUE
+      - EN_COURS
+      - TERMINEE
+      - ANNULEE
+      - EXPIREE
+      - SUSPENDUE
+    StatutCandidature:
+      type: string
+      enum:
+      - PROPOSEE
+      - INTERESSE
+      - SELECTIONNEE
+      - CONFIRMEE
+      - REFUSEE
+      - EXPIREE
+      - RETIREE
+      - ANNULEE
+      - LISTE_ATTENTE
+    Canal:
+      type: string
+      enum:
+      - APPLICATION
+      - WHATSAPP
+      - APPEL
+      - SMS
+    StatutMessage:
+      type: string
+      enum:
+      - EN_FILE
+      - ENVOYE
+      - LIVRE
+      - LU
+      - ECHEC
+    PeriodeDispo:
+      type: string
+      enum:
+      - JOURNEE
+      - MATIN
+      - APRES_MIDI
+      - CRENEAU
+    NiveauZone:
+      type: string
+      enum:
+      - REGION
+      - DEPARTEMENT
+      - COMMUNE
+      - QUARTIER
+    Presence:
+      type: string
+      enum:
+      - NON_SAISIE
+      - PRESENT
+      - ABSENT
+    StatutSignalement:
+      type: string
+      enum:
+      - OUVERT
+      - EN_COURS
+      - TRAITE
+      - REJETE
+    Jetons:
+      type: object
+      required:
+      - accessToken
+      - refreshToken
+      - expiresIn
+      - utilisateur
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Durée de vie du jeton d'accès en secondes
+          example: 900
+        nouveauCompte:
+          type: boolean
+        utilisateur:
+          $ref: '#/components/schemas/Profil'
+    Profil:
+      type: object
+      required:
+      - id
+      - role
+      - statut
+      properties:
+        id:
+          type: string
+          format: uuid
+        telephone:
+          $ref: '#/components/schemas/Telephone'
+        nom:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        statut:
+          $ref: '#/components/schemas/StatutCompte'
+        langue:
+          type: string
+          example: fr
+        creeLe:
+          type: string
+          format: date-time
+        scoreFiabilite:
+          type: number
+          format: float
+          nullable: true
+          description: Travailleur
+        possedeSonMateriel:
+          type: boolean
+          description: Travailleur
+        enPause:
+          type: boolean
+          description: Travailleur
+        metiers:
+          type: array
+          description: Travailleur
+          items:
+            $ref: '#/components/schemas/ProfilMetier'
+        zones:
+          type: array
+          description: Travailleur
+          items:
+            $ref: '#/components/schemas/Zone'
+        typeRecruteur:
+          $ref: '#/components/schemas/TypeRecruteur'
+        raisonSociale:
+          type: string
+          nullable: true
+          description: Recruteur de type ENTREPRISE
+        perimetre:
+          type: string
+          nullable: true
+          description: Agent
+    ProfilModification:
+      type: object
+      properties:
+        nom:
+          type: string
+        langue:
+          type: string
+        possedeSonMateriel:
+          type: boolean
+        typeRecruteur:
+          $ref: '#/components/schemas/TypeRecruteur'
+        raisonSociale:
+          type: string
+    ResumeUtilisateur:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nom:
+          type: string
+        telephone:
+          allOf:
+          - $ref: '#/components/schemas/Telephone'
+          nullable: true
+          description: null tant que la candidature n'est pas CONFIRMEE (RB-17)
+        scoreFiabilite:
+          type: number
+          format: float
+          nullable: true
+        noteMoyenne:
+          type: number
+          format: float
+          nullable: true
+    Metier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        libelle:
+          type: string
+          example: Maçon
+        categorie:
+          type: string
+          example: Bâtiment
+        actif:
+          type: boolean
+    MetierEntree:
+      type: object
+      properties:
+        libelle:
+          type: string
+        categorie:
+          type: string
+        actif:
+          type: boolean
+    ProfilMetier:
+      type: object
+      properties:
+        metier:
+          $ref: '#/components/schemas/Metier'
+        experienceAnnees:
+          type: integer
+          minimum: 0
+    Zone:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nom:
+          type: string
+          example: Pikine
+        niveau:
+          $ref: '#/components/schemas/NiveauZone'
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+    ZoneEntree:
+      type: object
+      required:
+      - nom
+      - niveau
+      properties:
+        nom:
+          type: string
+        niveau:
+          $ref: '#/components/schemas/NiveauZone'
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+    ConsentementEntree:
+      type: object
+      required:
+      - canal
+      - accorde
+      properties:
+        canal:
+          $ref: '#/components/schemas/Canal'
+        accorde:
+          type: boolean
+    Consentement:
+      allOf:
+      - $ref: '#/components/schemas/ConsentementEntree'
+      - type: object
+        properties:
+          date:
+            type: string
+            format: date-time
+          recueilliPar:
+            type: string
+            format: uuid
+            description: Utilisateur ou agent qui a recueilli le consentement
+    Mission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        recruteur:
+          $ref: '#/components/schemas/ResumeUtilisateur'
+        metier:
+          $ref: '#/components/schemas/Metier'
+        zone:
+          $ref: '#/components/schemas/Zone'
+        description:
+          type: string
+        nombrePostes:
+          type: integer
+          minimum: 1
+        postesConfirmes:
+          type: integer
+          minimum: 0
+        postesRestants:
+          type: integer
+          minimum: 0
+        date:
+          type: string
+          format: date
+        typeHoraire:
+          $ref: '#/components/schemas/TypeHoraire'
+        heureDebut:
+          type: string
+          example: 08:00
+          nullable: true
+        heureFin:
+          type: string
+          example: '17:00'
+          nullable: true
+        heureArriveeIndicative:
+          type: string
+          example: 07:30
+          nullable: true
+        remunerationFcfa:
+          type: integer
+          minimum: 0
+          example: 10000
+        urgente:
+          type: boolean
+        modeAttribution:
+          $ref: '#/components/schemas/ModeAttribution'
+        statut:
+          $ref: '#/components/schemas/StatutMission'
+        creeLe:
+          type: string
+          format: date-time
+        maCandidature:
+          description: Pour un travailleur, sa candidature éventuelle à cette mission
+          allOf:
+          - $ref: '#/components/schemas/Candidature'
+          nullable: true
+    MissionCreation:
+      type: object
+      required:
+      - metierId
+      - zoneId
+      - nombrePostes
+      - date
+      - typeHoraire
+      - remunerationFcfa
+      properties:
+        recruteurId:
+          type: string
+          format: uuid
+          description: Réservé à l'agent qui publie pour un recruteur
+        metierId:
+          type: string
+          format: uuid
+        zoneId:
+          type: string
+          format: uuid
+        description:
+          type: string
+          maxLength: 1000
+        nombrePostes:
+          type: integer
+          minimum: 1
+        date:
+          type: string
+          format: date
+        typeHoraire:
+          $ref: '#/components/schemas/TypeHoraire'
+        heureDebut:
+          type: string
+          example: 08:00
+        heureFin:
+          type: string
+          example: '12:00'
+        heureArriveeIndicative:
+          type: string
+          example: 07:30
+        remunerationFcfa:
+          type: integer
+          minimum: 0
+        urgente:
+          type: boolean
+          default: false
+        modeAttribution:
+          $ref: '#/components/schemas/ModeAttribution'
+        brouillon:
+          type: boolean
+          default: false
+    MissionModification:
+      type: object
+      properties:
+        zoneId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        nombrePostes:
+          type: integer
+          minimum: 1
+        date:
+          type: string
+          format: date
+        typeHoraire:
+          $ref: '#/components/schemas/TypeHoraire'
+        heureDebut:
+          type: string
+        heureFin:
+          type: string
+        heureArriveeIndicative:
+          type: string
+        remunerationFcfa:
+          type: integer
+          minimum: 0
+        urgente:
+          type: boolean
+        modeAttribution:
+          $ref: '#/components/schemas/ModeAttribution'
+        statut:
+          type: string
+          enum:
+          - PUBLIEE
+          description: Passer un BROUILLON en PUBLIEE
+    Candidature:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        missionId:
+          type: string
+          format: uuid
+        mission:
+          $ref: '#/components/schemas/MissionResume'
+        travailleur:
+          $ref: '#/components/schemas/ResumeUtilisateur'
+        statut:
+          $ref: '#/components/schemas/StatutCandidature'
+        canal:
+          $ref: '#/components/schemas/Canal'
+        dateReponse:
+          type: string
+          format: date-time
+          nullable: true
+        expireLe:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fin du délai de réponse (RB-13)
+        positionListeAttente:
+          type: integer
+          nullable: true
+        confirmation:
+          type: object
+          nullable: true
+          properties:
+            dateConfirmation:
+              type: string
+              format: date-time
+            presence:
+              $ref: '#/components/schemas/Presence'
+            contactRecruteur:
+              allOf:
+              - $ref: '#/components/schemas/Telephone'
+              nullable: true
+    MissionResume:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        metier:
+          $ref: '#/components/schemas/Metier'
+        zone:
+          $ref: '#/components/schemas/Zone'
+        date:
+          type: string
+          format: date
+        typeHoraire:
+          $ref: '#/components/schemas/TypeHoraire'
+        remunerationFcfa:
+          type: integer
+        statut:
+          $ref: '#/components/schemas/StatutMission'
+    Disponibilite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        periode:
+          $ref: '#/components/schemas/PeriodeDispo'
+        heureDebut:
+          type: string
+          nullable: true
+        heureFin:
+          type: string
+          nullable: true
+    DisponibiliteEntree:
+      type: object
+      required:
+      - date
+      - periode
+      properties:
+        travailleurId:
+          type: string
+          format: uuid
+          description: Réservé à l'agent qui saisit pour un travailleur
+        date:
+          type: string
+          format: date
+        periode:
+          $ref: '#/components/schemas/PeriodeDispo'
+        heureDebut:
+          type: string
+          description: Obligatoire si periode = CRENEAU
+        heureFin:
+          type: string
+          description: Obligatoire si periode = CRENEAU
+    Evaluation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        missionId:
+          type: string
+          format: uuid
+        auteur:
+          $ref: '#/components/schemas/ResumeUtilisateur'
+        cible:
+          $ref: '#/components/schemas/ResumeUtilisateur'
+        note:
+          type: integer
+          minimum: 1
+          maximum: 5
+        commentaire:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+    Signalement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        auteur:
+          $ref: '#/components/schemas/ResumeUtilisateur'
+        cibleType:
+          type: string
+          enum:
+          - UTILISATEUR
+          - MISSION
+        cibleId:
+          type: string
+          format: uuid
+        motif:
+          type: string
+        description:
+          type: string
+          nullable: true
+        statut:
+          $ref: '#/components/schemas/StatutSignalement'
+        decision:
+          type: string
+          nullable: true
+        creeLe:
+          type: string
+          format: date-time
+    ReponseIncomprise:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        travailleur:
+          $ref: '#/components/schemas/ResumeUtilisateur'
+        texteRecu:
+          type: string
+          example: oui je viens
+        candidatureId:
+          type: string
+          format: uuid
+          nullable: true
+        recueLe:
+          type: string
+          format: date-time
+        traitee:
+          type: boolean
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          example: proposition
+        canal:
+          $ref: '#/components/schemas/Canal'
+        statut:
+          $ref: '#/components/schemas/StatutMessage'
+        destinataire:
+          $ref: '#/components/schemas/ResumeUtilisateur'
+        missionId:
+          type: string
+          format: uuid
+          nullable: true
+        idMessageExterne:
+          type: string
+          nullable: true
+        dateEnvoi:
+          type: string
+          format: date-time
+          nullable: true
+    EntreeAudit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date-time
+        acteurId:
+          type: string
+          format: uuid
+        acteurRole:
+          $ref: '#/components/schemas/Role'
+        canal:
+          $ref: '#/components/schemas/Canal'
+        action:
+          type: string
+          example: CANDIDATURE_CONFIRMEE
+        objetType:
+          type: string
+          example: Candidature
+        objetId:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    TableauDeBord:
+      type: object
+      properties:
+        periode:
+          type: object
+          properties:
+            dateDebut:
+              type: string
+              format: date
+            dateFin:
+              type: string
+              format: date
+        delaiMoyenPourvoiHeures:
+          type: number
+          format: float
+        delaiMoyenMissionsUrgentesHeures:
+          type: number
+          format: float
+          description: Objectif inférieur à 2 heures
+        tauxMissionsPourvues:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        tauxReponseTravailleurs:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        tauxPresenceConfirmes:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        partMissionsSansApplication:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Pourvues via WhatsApp ou agent
+        surconfirmations:
+          type: integer
+          description: Doit toujours valoir 0 (RB-05)
+        missionsParStatut:
+          type: object
+          additionalProperties:
+            type: integer
+        utilisateursActifs:
+          type: object
+          properties:
+            travailleurs:
+              type: integer
+            recruteurs:
+              type: integer
+    PageMissions:
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - taille
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mission'
+        total:
+          type: integer
+        page:
+          type: integer
+        taille:
+          type: integer
+    PageCandidatures:
+      type: object
+      required:
+      - items
+      - total
+      - page
+      - taille
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Candidature'
+        total:
+          type: integer
+        page:
+          type: integer
+        taille:
+          type: integer

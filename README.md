@@ -1,70 +1,56 @@
-# XeuySil — Client (Intégration Continue)
+# Welcome to your Expo app 👋
 
-Dépôt du frontend de la plateforme **XeuySil** : mise en relation entre recruteurs et travailleurs journaliers au Sénégal.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Présentation
+## Get started
 
-Ce dépôt contient les deux applications clientes du projet :
+1. Install dependencies
 
-| Application | Technologie | Public cible |
-|-------------|------------|--------------|
-| **Console d'administration** | Next.js (React, TypeScript) | Administrateurs, modérateurs et agents |
-| **Application mobile** | Flutter (Dart) | Travailleurs et recruteurs |
+   ```bash
+   npm install
+   ```
 
-## Stack technique
+2. Start the app
 
-### Console d'administration (web)
-- **Next.js** avec React et TypeScript
-- **TanStack Query** pour la gestion des requêtes
-- **Zod** pour la validation des données
+   ```bash
+   npx expo start
+   ```
 
-### Application mobile
-- **Flutter** (Dart), Android en priorité
-- **Riverpod** pour la gestion d'état
-- **Dio** pour les appels réseau
-- **Drift** (SQLite) pour le cache local
+In the output, you'll find options to open the app in a
 
-## Structure attendue
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-```
-client-ic/
-├── apps/
-│   ├── admin-web/      # Console d'administration (Next.js)
-│   │   ├── src/
-│   │   ├── package.json
-│   │   └── next.config.js
-│   └── mobile/         # Application mobile (Flutter)
-│       ├── lib/
-│       ├── pubspec.yaml
-│       └── analysis_options.yaml
-├── tests/
-├── Dockerfile          # Image Docker de la console web
-├── Jenkinsfile
-├── package.json
-└── README.md
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Get a fresh project
+
+When you're ready, run:
+
+```bash
+npm run reset-project
 ```
 
-## Pipeline CI (à venir)
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-Le pipeline Jenkins sera configuré après intégration du code applicatif :
+### Other setup steps
 
-1. Récupération du code
-2. Installation des dépendances (npm)
-3. Vérification du style (lint)
-4. Exécution des tests
-5. Analyse de sécurité (npm audit)
-6. Construction de l'image Docker de la console web
-7. Analyse de vulnérabilités de l'image (Trivy)
-8. Publication sur Docker Hub avec tag versionné
-9. Compilation de l'APK Flutter (archivée dans Jenkins)
+- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
+- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
+- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
-## Équipe
+## Learn more
 
-| Membre | Responsabilité |
-|--------|---------------|
-| Malick Cissoko | Développement du frontend (mobile + administration) |
-| Boubacar NIANG | Intégration continue et déploiement |
+To learn more about developing your project with Expo, look at the following resources:
 
-## Licence
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-Projet universitaire — Master 2 SI-SR, UADB (2026-2027).
+## Join the community
+
+Join our community of developers creating universal apps.
+
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

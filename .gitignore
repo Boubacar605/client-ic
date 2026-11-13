@@ -1,48 +1,43 @@
-# Dépendances
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
 node_modules/
-.pnp
-.pnp.js
 
-# Next.js
-.next/
-out/
-
-# Construction
-build/
+# Expo
+.expo/
 dist/
+web-build/
+expo-env.d.ts
 
-# Variables d'environnement
-.env
-.env.local
-.env.*.local
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
-# Éditeurs
-.idea/
-.vscode/
-*.swp
-*.swo
+# Metro
+.metro-health-check*
 
-# Système
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
 .DS_Store
-Thumbs.db
+*.pem
 
-# Docker
-docker-compose.override.yml
+# local env files
+.env*.local
 
-# Flutter
-apps/mobile/.dart_tool/
-apps/mobile/.packages
-apps/mobile/build/
-apps/mobile/.flutter-plugins
-apps/mobile/.flutter-plugins-dependencies
-apps/mobile/android/.gradle/
-apps/mobile/android/local.properties
-apps/mobile/ios/Pods/
-apps/mobile/ios/.symlinks/
-apps/mobile/pubspec.lock
+# typescript
+*.tsbuildinfo
 
-# Tests
-coverage/
+example
 
-# Claude
-.claude/
+# generated native folders
+/ios
+/android

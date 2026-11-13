@@ -1,0 +1,2945 @@
+openapi: 3.1.0
+info:
+  title: XeuySil API, mock travailleur (contrat d'Ibrahima + exemples)
+  version: 1.0.0
+  description: 'Contrat API unique de la plateforme XeuySil pour la mise en relation entre travailleurs journaliers,
+
+    recruteurs, agents et administrateurs. Cette spécification est alignée sur le schéma PostgreSQL et la logique
+
+    métier de Supabase Auth, PostgreSQL, Prisma et NestJS.
+
+    '
+  contact:
+    name: XeuySil Platform Team
+    email: platform@xeuysil.com
+servers:
+- url: http://localhost:4010
+  description: Mock Prism (exemples ajoutés)
+security:
+- bearerAuth: []
+tags:
+- name: Auth
+  description: Inscription, connexion, mot de passe et session utilisateur.
+- name: Public
+  description: Endpoints publics de statistiques et données de démarrage.
+- name: Bootstrap
+  description: Données initiales nécessaires au démarrage du front.
+- name: Metiers
+  description: Référentiel métier centralisé et contrôlé.
+- name: Zones
+  description: Structure géographique hiérarchique.
+- name: Travailleurs
+  description: Gestion du profil, disponibilités et activités du travailleur.
+- name: Recruteurs
+  description: Gestion du profil recruteur et du suivi d’activité.
+- name: Agents
+  description: Gestion du profil agent et proposition de travailleurs.
+- name: Missions
+  description: Création, publication, clôture et suivi des missions.
+- name: Candidatures
+  description: Candidatures, sélection, confirmation et rejet.
+- name: Disponibilites
+  description: Disponibilités journalières et créneaux de travail.
+- name: Evaluations
+  description: Évaluations entre utilisateurs et missions.
+- name: Notifications
+  description: Notifications utilisateur et messagerie WhatsApp.
+- name: Dashboard
+  description: Indicateurs et synthèses métier par profil.
+- name: Admin
+  description: Administration système et gestion de plateforme.
+- name: Commissions
+  description: Calculs et résumés de commissions.
+- name: WhatsApp
+  description: Webhooks et envoi de messages WhatsApp.
+- name: PlatformSettings
+  description: Paramètres globaux applicatifs.
+paths:
+  /auth/register/worker:
+    post:
+      tags:
+      - Auth
+      summary: Inscription d’un travailleur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterWorkerDto'
+            examples:
+              default:
+                value:
+                  email: worker@example.com
+                  password: StrongPass123!
+                  nom: Kouassi Jean
+                  telephone: '+2250701020304'
+                  langue: fr
+                  metierIds:
+                  - 2d1c2f4d-6f3d-46e3-87ef-4c7df52995f5
+      responses:
+        '201':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Création réussie
+                data:
+                  id: 00000009-0000-4000-8000-000000000009
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+  /auth/register/recruiter:
+    post:
+      tags:
+      - Auth
+      summary: Inscription d’un recruteur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRecruiterDto'
+            examples:
+              default:
+                value:
+                  email: recruteur@example.com
+                  password: StrongPass123!
+                  nom: Awa Diop
+                  telephone: '+2250701020305'
+                  langue: fr
+                  typeRecruteur: ENTREPRISE
+                  raisonSociale: BuildPro SARL
+      responses:
+        '201':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Création réussie
+                data:
+                  id: 00000009-0000-4000-8000-000000000009
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Connexion utilisateur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+            examples:
+              default:
+                value:
+                  email: user@example.com
+                  password: StrongPass123!
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Authentification réussie
+                data:
+                  accessToken: mock.access.token
+                  refreshToken: mock.refresh.token
+                  user: &id001
+                    id: 00000002-0000-4000-8000-000000000002
+                    email: travailleur@xeuysil.test
+                    role: TRAVAILLEUR
+                    statut: ACTIF
+                    createdAt: '2026-10-20T08:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/forgot-password:
+    post:
+      tags:
+      - Auth
+      summary: Demande de réinitialisation du mot de passe
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordDto'
+            examples:
+              default:
+                value:
+                  email: user@example.com
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/reset-password:
+    post:
+      tags:
+      - Auth
+      summary: Réinitialiser le mot de passe
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordDto'
+            examples:
+              default:
+                value:
+                  token: reset-token-123
+                  password: NewStrongPass456!
+                  passwordConfirmation: NewStrongPass456!
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Déconnexion de l’utilisateur
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/refresh-token:
+    post:
+      tags:
+      - Auth
+      summary: Rafraîchir le token JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            examples:
+              default:
+                value:
+                  refreshToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Token rafraîchi
+                data:
+                  accessToken: mock.access.token
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Retourne le profil courant
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Profil chargé
+                data: *id001
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /bootstrap:
+    get:
+      tags:
+      - Bootstrap
+      summary: Charge les données initiales du front
+      security: []
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Bootstrap chargé
+                data:
+                  metiers:
+                  - &id002
+                    id: 00000100-0000-4000-8000-000000000100
+                    code: MACON
+                    libelle: Maçon
+                    categorie: BTP
+                    actif: true
+                  - &id003
+                    id: 00000100-0000-4000-8000-000000000101
+                    code: MENUISIER
+                    libelle: Menuisier
+                    categorie: BTP
+                    actif: true
+                  - &id004
+                    id: 00000100-0000-4000-8000-000000000102
+                    code: MANOEUVRE
+                    libelle: Manœuvre
+                    categorie: BTP
+                    actif: true
+                  - &id005
+                    id: 00000100-0000-4000-8000-000000000103
+                    code: LESSIVEUSE
+                    libelle: Lessiveuse
+                    categorie: Maison
+                    actif: true
+                  - &id006
+                    id: 00000100-0000-4000-8000-000000000104
+                    code: REPASSEUSE
+                    libelle: Repasseuse
+                    categorie: Maison
+                    actif: true
+                  - &id007
+                    id: 00000100-0000-4000-8000-000000000105
+                    code: JARDINIER
+                    libelle: Jardinier
+                    categorie: Extérieur
+                    actif: true
+                  - &id008
+                    id: 00000100-0000-4000-8000-000000000106
+                    code: AIDE_MENAGERE
+                    libelle: Aide-ménagère
+                    categorie: Maison
+                    actif: true
+                  - &id009
+                    id: 00000100-0000-4000-8000-000000000107
+                    code: MANUTENTIONNAIRE
+                    libelle: Manutentionnaire
+                    categorie: Logistique
+                    actif: true
+                  zones:
+                  - &id010
+                    id: 00000200-0000-4000-8000-000000000200
+                    nom: Pikine
+                    niveau: COMMUNE
+                    parentId: null
+                  - &id011
+                    id: 00000200-0000-4000-8000-000000000201
+                    nom: Guédiawaye
+                    niveau: COMMUNE
+                    parentId: null
+                  - &id012
+                    id: 00000200-0000-4000-8000-000000000202
+                    nom: Parcelles Assainies
+                    niveau: COMMUNE
+                    parentId: null
+                  - &id013
+                    id: 00000200-0000-4000-8000-000000000203
+                    nom: Médina
+                    niveau: COMMUNE
+                    parentId: null
+                  - &id014
+                    id: 00000200-0000-4000-8000-000000000204
+                    nom: Rufisque
+                    niveau: COMMUNE
+                    parentId: null
+                  - &id015
+                    id: 00000200-0000-4000-8000-000000000205
+                    nom: Thiaroye
+                    niveau: COMMUNE
+                    parentId: null
+                  settings:
+                    commissionPercent: 10
+                    missionAutoCloseDays: 7
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /public/stats:
+    get:
+      tags:
+      - Public
+      summary: Statistiques publiques
+      security: []
+      responses:
+        '200':
+          description: Statistiques publiques
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      workers: 1450
+                      recruiters: 350
+                      missions: 2800
+                      placements: 2100
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /metiers:
+    get:
+      tags:
+      - Metiers
+      summary: Liste des métiers actifs
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/SortParam'
+      - $ref: '#/components/parameters/OrderParam'
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                - *id002
+                - *id003
+                - *id004
+                - *id005
+                - *id006
+                - *id007
+                - *id008
+                - *id009
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /metiers/{id}:
+    get:
+      tags:
+      - Metiers
+      summary: Détail d’un métier
+      security: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Métier trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      id: 7c700d72-db9f-4575-8b66-c30ef24d1f7c
+                      code: MACON
+                      libelle: Maçon
+                      categorie: BTP
+                      actif: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /zones:
+    get:
+      tags:
+      - Zones
+      summary: Liste des zones
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                - *id010
+                - *id011
+                - *id012
+                - *id013
+                - *id014
+                - *id015
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /zones/{id}:
+    get:
+      tags:
+      - Zones
+      summary: Détail d’une zone
+      security: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /travailleurs/me:
+    get:
+      tags:
+      - Travailleurs
+      summary: Profil du travailleur courant
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                  userId: 00000002-0000-4000-8000-000000000002
+                  scoreFiabilite: 92
+                  possedeSonMateriel: true
+                  profile:
+                    id: 00000002-0000-4000-8000-000000000002
+                    nom: Abdou Fall
+                    telephone: '+221785400756'
+                    role: TRAVAILLEUR
+                    statut: ACTIF
+                    langue: fr
+                    photoUrl: null
+                    createdAt: '2026-10-20T08:30:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+      - Travailleurs
+      summary: Met à jour le profil travailleur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerProfileDto'
+            examples:
+              default:
+                value:
+                  scoreFiabilite: 96.2
+                  possedeSonMateriel: true
+                  agentId: ef8f1e38-7905-4519-927d-c58d1a1d4a81
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /travailleurs/dashboard:
+    get:
+      tags:
+      - Travailleurs
+      summary: Tableau de bord du travailleur
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                  missionsCompleted: 4
+                  missionsPending: 1
+                  grossRevenue: 52000
+                  platformCommission: 5200
+                  netRevenue: 46800
+                  scoreFiabilite: 92
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /travailleurs/commissions:
+    get:
+      tags:
+      - Travailleurs
+      summary: Commissions du travailleur
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /travailleurs/missions:
+    get:
+      tags:
+      - Travailleurs
+      summary: Missions du travailleur
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/SortParam'
+      - $ref: '#/components/parameters/OrderParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /travailleurs/candidatures:
+    get:
+      tags:
+      - Travailleurs
+      summary: Candidatures du travailleur
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/SortParam'
+      - $ref: '#/components/parameters/OrderParam'
+      - $ref: '#/components/parameters/CandidatureStatutParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /recruteurs/me:
+    get:
+      tags:
+      - Recruteurs
+      summary: Profil du recruteur courant
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+      - Recruteurs
+      summary: Mise à jour du recruteur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecruiterProfileDto'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /recruteurs/dashboard:
+    get:
+      tags:
+      - Recruteurs
+      summary: Tableau de bord recruteur
+      responses:
+        '200':
+          description: Dashboard recruteur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      missionsPublished: 20
+                      activeCandidates: 84
+                      pendingResponses: 15
+                      totalRevenue: 1280000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /agents/me:
+    get:
+      tags:
+      - Agents
+      summary: Profil de l’agent courant
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+      - Agents
+      summary: Mise à jour du profil agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentProfileDto'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /agents/dashboard:
+    get:
+      tags:
+      - Agents
+      summary: Tableau de bord agent
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /agents/workers:
+    get:
+      tags:
+      - Agents
+      summary: Liste des travailleurs assignés
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /agents/proposals:
+    post:
+      tags:
+      - Agents
+      summary: Soumettre une proposition d’affectation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - travailleurId
+              - missionId
+              - message
+              properties:
+                travailleurId:
+                  type: string
+                  format: uuid
+                missionId:
+                  type: string
+                  format: uuid
+                message:
+                  type: string
+                  example: Travailleur adapté au profil demandé.
+      responses:
+        '201':
+          $ref: '#/components/responses/CreatedSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/public:
+    get:
+      tags:
+      - Missions
+      summary: Missions publiques visibles
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/SortParam'
+      - $ref: '#/components/parameters/OrderParam'
+      - $ref: '#/components/parameters/DateParam'
+      - $ref: '#/components/parameters/MetierParam'
+      - $ref: '#/components/parameters/ZoneParam'
+      - $ref: '#/components/parameters/StatutMissionParam'
+      - $ref: '#/components/parameters/UrgenteParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/recommended:
+    get:
+      tags:
+      - Missions
+      summary: Missions recommandées pour le travailleur
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                  items:
+                  - &id016
+                    id: 00000300-0000-4000-8000-000000000001
+                    recruteurId: 00000001-0000-4000-8000-000000000001
+                    metierId: 00000100-0000-4000-8000-000000000100
+                    zoneId: 00000200-0000-4000-8000-000000000200
+                    description: Dalle à couler, matériel fourni.
+                    nombrePostes: 2
+                    remunerationFcfa: 12000
+                    dateMission: '2026-12-02'
+                    typeHoraire: TRAVAIL_JOURNALIER
+                    heureDebut: null
+                    heureFin: null
+                    urgente: false
+                    modeAttribution: SELECTION
+                    statut: PUBLIEE
+                    createdAt: '2026-11-08T16:00:00Z'
+                  - &id017
+                    id: 00000300-0000-4000-8000-000000000004
+                    recruteurId: 00000001-0000-4000-8000-000000000001
+                    metierId: 00000100-0000-4000-8000-000000000102
+                    zoneId: 00000200-0000-4000-8000-000000000205
+                    description: Déchargement de sable.
+                    nombrePostes: 3
+                    remunerationFcfa: 6000
+                    dateMission: '2026-12-04'
+                    typeHoraire: DEMI_JOURNEE
+                    heureDebut: null
+                    heureFin: null
+                    urgente: true
+                    modeAttribution: PREMIER_ARRIVE
+                    statut: PUBLIEE
+                    createdAt: '2026-11-08T16:00:00Z'
+                  - &id018
+                    id: 00000300-0000-4000-8000-000000000005
+                    recruteurId: 00000001-0000-4000-8000-000000000001
+                    metierId: 00000100-0000-4000-8000-000000000101
+                    zoneId: 00000200-0000-4000-8000-000000000201
+                    description: Pose de deux portes.
+                    nombrePostes: 1
+                    remunerationFcfa: 15000
+                    dateMission: '2026-12-05'
+                    typeHoraire: TRAVAIL_JOURNALIER
+                    heureDebut: null
+                    heureFin: null
+                    urgente: false
+                    modeAttribution: SELECTION
+                    statut: PUBLIEE
+                    createdAt: '2026-11-08T16:00:00Z'
+                  pagination:
+                    page: 1
+                    limit: 20
+                    total: 3
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions:
+    get:
+      tags:
+      - Missions
+      summary: Liste des missions
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/SortParam'
+      - $ref: '#/components/parameters/OrderParam'
+      - $ref: '#/components/parameters/DateParam'
+      - $ref: '#/components/parameters/MetierParam'
+      - $ref: '#/components/parameters/ZoneParam'
+      - $ref: '#/components/parameters/StatutMissionParam'
+      - $ref: '#/components/parameters/UrgenteParam'
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                  items:
+                  - *id016
+                  - *id017
+                  - *id018
+                  pagination:
+                    page: 1
+                    limit: 20
+                    total: 3
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+      - Missions
+      summary: Créer une mission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMissionDto'
+            examples:
+              default:
+                value:
+                  recruteurId: d9d4d5b0-7cdf-4d24-8f0e-826957dde6ad
+                  metierId: 7c700d72-db9f-4575-8b66-c30ef24d1f7c
+                  zoneId: f3b5d4d2-383d-4ce2-8d10-8efef3eeb32f
+                  description: Recherche un maçon pour chantier de rénovation.
+                  nombrePostes: 3
+                  remunerationFcfa: 450000
+                  dateMission: '2026-12-05'
+                  datePublication: '2026-11-10'
+                  dateCloture: '2026-11-20'
+                  typeHoraire: TRAVAIL_JOURNALIER
+                  heureDebut: 08:00:00
+                  heureFin: '17:00:00'
+                  urgente: true
+                  modeAttribution: PREMIER_ARRIVE
+                  statut: BROUILLON
+      responses:
+        '201':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Création réussie
+                data:
+                  id: 00000300-0000-4000-8000-000000000099
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/{id}:
+    get:
+      tags:
+      - Missions
+      summary: Détail d’une mission
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data: *id016
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+      - Missions
+      summary: Modifier une mission
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMissionDto'
+            examples:
+              default:
+                value:
+                  description: Chantier de rénovation en cours.
+                  nombrePostes: 2
+                  urgente: false
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+      - Missions
+      summary: Supprimer une mission
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/{id}/publish:
+    post:
+      tags:
+      - Missions
+      summary: Publier une mission
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/{id}/close:
+    post:
+      tags:
+      - Missions
+      summary: Clôturer une mission
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/{id}/cancel:
+    post:
+      tags:
+      - Missions
+      summary: Annuler une mission
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /candidatures:
+    post:
+      tags:
+      - Candidatures
+      summary: Soumettre une candidature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCandidatureDto'
+            examples:
+              default:
+                value:
+                  missionId: 3f450a5c-b68b-45a5-9deb-8398d927d598
+                  travailleurId: d5fa1a2d-9f7a-49b8-bd87-fdff5f2f2d1a
+                  canal: APPLICATION
+      responses:
+        '201':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Création réussie
+                data:
+                  id: 00000500-0000-4000-8000-000000000099
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags:
+      - Candidatures
+      summary: Liste des candidatures
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/SortParam'
+      - $ref: '#/components/parameters/OrderParam'
+      - $ref: '#/components/parameters/CandidatureStatutParam'
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                  items:
+                  - id: 00000500-0000-4000-8000-000000000011
+                    missionId: 00000300-0000-4000-8000-000000000001
+                    travailleurId: 00000002-0000-4000-8000-000000000002
+                    statut: INTERESSE
+                    canal: APPLICATION
+                    dateReponse: '2026-11-09T07:40:00Z'
+                  - id: 00000500-0000-4000-8000-000000000012
+                    missionId: 00000300-0000-4000-8000-000000000004
+                    travailleurId: 00000002-0000-4000-8000-000000000002
+                    statut: SELECTIONNEE
+                    canal: APPLICATION
+                    dateReponse: '2026-11-09T07:40:00Z'
+                  - id: 00000500-0000-4000-8000-000000000013
+                    missionId: 00000300-0000-4000-8000-000000000005
+                    travailleurId: 00000002-0000-4000-8000-000000000002
+                    statut: CONFIRMEE
+                    canal: APPLICATION
+                    dateReponse: '2026-11-09T07:40:00Z'
+                  pagination:
+                    page: 1
+                    limit: 20
+                    total: 3
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /candidatures/{id}:
+    get:
+      tags:
+      - Candidatures
+      summary: Détail d’une candidature
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /candidatures/{id}/select:
+    post:
+      tags:
+      - Candidatures
+      summary: Sélectionner une candidature
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /candidatures/{id}/confirm:
+    post:
+      tags:
+      - Candidatures
+      summary: Confirmer une candidature
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /candidatures/{id}/reject:
+    post:
+      tags:
+      - Candidatures
+      summary: Refuser une candidature
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /candidatures/{id}/withdraw:
+    post:
+      tags:
+      - Candidatures
+      summary: Retirer une candidature
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /disponibilites:
+    post:
+      tags:
+      - Disponibilites
+      summary: Créer une disponibilité
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDisponibiliteDto'
+            examples:
+              default:
+                value:
+                  travailleurId: d5fa1a2d-9f7a-49b8-bd87-fdff5f2f2d1a
+                  dateDisponibilite: '2026-11-15'
+                  periode: MATIN
+                  heureDebut: 08:00:00
+                  heureFin: '12:00:00'
+      responses:
+        '201':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Création réussie
+                data:
+                  id: 00000600-0000-4000-8000-000000000099
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags:
+      - Disponibilites
+      summary: Liste des disponibilités
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data:
+                  items:
+                  - id: 00000600-0000-4000-8000-000000000001
+                    travailleurId: 00000002-0000-4000-8000-000000000002
+                    dateDisponibilite: '2026-12-01'
+                    periode: JOURNEE
+                    heureDebut: null
+                    heureFin: null
+                    createdAt: '2026-11-08T10:00:00Z'
+                  - id: 00000600-0000-4000-8000-000000000002
+                    travailleurId: 00000002-0000-4000-8000-000000000002
+                    dateDisponibilite: '2026-12-02'
+                    periode: MATIN
+                    heureDebut: null
+                    heureFin: null
+                    createdAt: '2026-11-08T10:00:00Z'
+                  pagination:
+                    page: 1
+                    limit: 20
+                    total: 2
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /disponibilites/{id}:
+    patch:
+      tags:
+      - Disponibilites
+      summary: Modifier une disponibilité
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDisponibiliteDto'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+      - Disponibilites
+      summary: Supprimer une disponibilité
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /evaluations:
+    post:
+      tags:
+      - Evaluations
+      summary: Créer une évaluation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluationDto'
+            examples:
+              default:
+                value:
+                  missionId: 3f450a5c-b68b-45a5-9deb-8398d927d598
+                  auteurId: d5fa1a2d-9f7a-49b8-bd87-fdff5f2f2d1a
+                  cibleId: 9e5d3d9b-07bb-4c55-8d4c-f0f04b4a2a6d
+                  note: 5
+                  commentaire: Très bon travail, ponctuel et sérieux.
+      responses:
+        '201':
+          $ref: '#/components/responses/CreatedSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      tags:
+      - Evaluations
+      summary: Liste des évaluations
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /notifications:
+    get:
+      tags:
+      - Notifications
+      summary: Liste des notifications
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      - $ref: '#/components/parameters/NotificationLuParam'
+      - $ref: '#/components/parameters/SortParam'
+      - $ref: '#/components/parameters/OrderParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /notifications/{id}/read:
+    patch:
+      tags:
+      - Notifications
+      summary: Marquer une notification comme lue
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /commissions:
+    get:
+      tags:
+      - Commissions
+      summary: Liste des commissions
+      parameters:
+      - $ref: '#/components/parameters/PageParam'
+      - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /commissions/summary:
+    get:
+      tags:
+      - Commissions
+      summary: Résumé des commissions
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /dashboard/public:
+    get:
+      tags:
+      - Dashboard
+      summary: Dashboard public
+      security: []
+      responses:
+        '200':
+          description: Résumé public de performance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      totalWorkers: 1450
+                      totalRecruiters: 350
+                      totalMissions: 2800
+                      totalPlacements: 2100
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /dashboard/worker:
+    get:
+      tags:
+      - Dashboard
+      summary: Dashboard travailleur
+      responses:
+        '200':
+          description: Tableau de bord travailleur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      missionsCompleted: 42
+                      missionsPending: 8
+                      grossRevenue: 540000
+                      platformCommission: 54000
+                      netRevenue: 486000
+                      scoreFiabilite: 94.56
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /dashboard/recruiter:
+    get:
+      tags:
+      - Dashboard
+      summary: Dashboard recruteur
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /dashboard/agent:
+    get:
+      tags:
+      - Dashboard
+      summary: Dashboard agent
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /dashboard/admin:
+    get:
+      tags:
+      - Dashboard
+      summary: Dashboard administrateur
+      responses:
+        '200':
+          description: Dashboard administrateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      workersRegistered: 1450
+                      recruitersRegistered: 350
+                      agentsRegistered: 92
+                      missionsPublished: 2800
+                      missionsCompleted: 2100
+                      totalRevenue: 15450000
+                      totalCommissions: 1545000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /settings:
+    get:
+      tags:
+      - PlatformSettings
+      summary: Liste des paramètres de plateforme
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+      - PlatformSettings
+      summary: Mettre à jour un paramètre
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - settingKey
+              - settingValue
+              properties:
+                settingKey:
+                  type: string
+                  example: MISSION_AUTO_CLOSE_DAYS
+                settingValue:
+                  type: string
+                  example: '7'
+                description:
+                  type: string
+                  example: Nombre de jours avant fermeture automatique.
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /whatsapp/webhook:
+    post:
+      tags:
+      - WhatsApp
+      summary: Webhook WhatsApp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entry:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+            examples:
+              default:
+                value:
+                  entry:
+                  - changes:
+                    - field: messages
+                      value:
+                        metadata:
+                          display_phone_number: '+22500000000'
+                        contacts:
+                        - profile:
+                            name: Jean
+                        messages:
+                        - from: '+2250701010101'
+                          text:
+                            body: Bonjour
+      responses:
+        '200':
+          description: Webhook traité avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /notifications/whatsapp/send:
+    post:
+      tags:
+      - WhatsApp
+      summary: Envoyer une notification WhatsApp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MissionProposalMessageDto'
+            examples:
+              proposal:
+                value:
+                  to: '+2250701010101'
+                  missionId: 3f450a5c-b68b-45a5-9deb-8398d927d598
+                  message: Votre candidature a été retenue pour la mission de maçon.
+      responses:
+        '200':
+          $ref: '#/components/responses/Success200'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/00000300-0000-4000-8000-000000000001:
+    get:
+      tags:
+      - Missions
+      summary: Détail d’une mission
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data: *id016
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/00000300-0000-4000-8000-000000000004:
+    get:
+      tags:
+      - Missions
+      summary: Détail d’une mission
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data: *id017
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /missions/00000300-0000-4000-8000-000000000005:
+    get:
+      tags:
+      - Missions
+      summary: Détail d’une mission
+      responses:
+        '200':
+          description: Exemple
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+              example:
+                success: true
+                message: Opération réussie
+                data: *id018
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT fourni par Supabase Auth ou l’API backend.
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Numéro de page pour la pagination.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: Nombre d’éléments par page.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    SortParam:
+      name: sort
+      in: query
+      description: Champ utilisé pour le tri.
+      required: false
+      schema:
+        type: string
+        example: createdAt
+    OrderParam:
+      name: order
+      in: query
+      description: Ordre de tri ascendant ou descendant.
+      required: false
+      schema:
+        type: string
+        enum:
+        - asc
+        - desc
+        default: desc
+    DateParam:
+      name: date
+      in: query
+      description: Filtre de date au format ISO.
+      required: false
+      schema:
+        type: string
+        format: date
+    MetierParam:
+      name: metier
+      in: query
+      description: Identifiant du métier à filtrer.
+      required: false
+      schema:
+        type: string
+        format: uuid
+    ZoneParam:
+      name: zone
+      in: query
+      description: Identifiant de la zone géographique à filtrer.
+      required: false
+      schema:
+        type: string
+        format: uuid
+    StatutMissionParam:
+      name: statut
+      in: query
+      description: Filtre sur le statut de la mission.
+      required: false
+      schema:
+        $ref: '#/components/schemas/statut_mission_enum'
+    UrgenteParam:
+      name: urgente
+      in: query
+      description: Filtre sur les missions urgentes.
+      required: false
+      schema:
+        type: boolean
+    CandidatureStatutParam:
+      name: statut
+      in: query
+      description: Filtre sur le statut de candidature.
+      required: false
+      schema:
+        $ref: '#/components/schemas/statut_candidature_enum'
+    NotificationLuParam:
+      name: lu
+      in: query
+      description: Filtre sur l’état de lecture des notifications.
+      required: false
+      schema:
+        type: boolean
+  responses:
+    Success200:
+      description: Opération réussie
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiSuccessResponse'
+          examples:
+            success:
+              value:
+                success: true
+                message: Opération réussie
+                data: {}
+    CreatedSuccess:
+      description: Création réussie
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiSuccessResponse'
+          examples:
+            created:
+              value:
+                success: true
+                message: Création réussie
+                data:
+                  id: 8ff0d3f9-c1d7-4b06-aa7d-5bced61fb6d8
+    NoContent:
+      description: Aucune donnée à renvoyer
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          examples:
+            invalid:
+              value:
+                success: false
+                message: Données invalides
+                errors:
+                - field: email
+                  message: L’email est requis
+    Unauthorized:
+      description: Non autorisé
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            unauthorized:
+              value:
+                success: false
+                message: Jeton JWT invalide ou expiré
+                errorCode: UNAUTHORIZED
+    Forbidden:
+      description: Accès interdit
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            forbidden:
+              value:
+                success: false
+                message: Vous n’avez pas les droits requis
+                errorCode: FORBIDDEN
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            notFound:
+              value:
+                success: false
+                message: Ressource introuvable
+                errorCode: NOT_FOUND
+    Conflict:
+      description: Conflit
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            conflict:
+              value:
+                success: false
+                message: Conflit de données
+                errorCode: CONFLICT
+    UnprocessableEntity:
+      description: Données non traitables
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          examples:
+            validation:
+              value:
+                success: false
+                message: La validation a échoué
+                errors:
+                - field: remunerationFcfa
+                  message: La rémunération doit être positive
+    InternalServerError:
+      description: Erreur interne du serveur
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            serverError:
+              value:
+                success: false
+                message: Erreur interne du serveur
+                errorCode: INTERNAL_SERVER_ERROR
+  schemas:
+    ApiSuccessResponse:
+      type: object
+      additionalProperties: true
+      required:
+      - success
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          nullable: true
+        data:
+          nullable: true
+      description: Réponse standard pour les opérations réussies.
+    ApiErrorResponse:
+      type: object
+      required:
+      - success
+      - message
+      - errorCode
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errorCode:
+          type: string
+          example: NOT_FOUND
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+      description: Réponse standard pour les erreurs applicatives.
+    ValidationErrorResponse:
+      allOf:
+      - $ref: '#/components/schemas/ApiErrorResponse'
+      - type: object
+        required:
+        - errors
+        properties:
+          errors:
+            type: array
+            items:
+              $ref: '#/components/schemas/ValidationErrorItem'
+    ValidationErrorItem:
+      type: object
+      required:
+      - field
+      - message
+      properties:
+        field:
+          type: string
+          example: email
+        message:
+          type: string
+          example: L’email est invalide
+    PaginationResponse:
+      type: object
+      required:
+      - page
+      - limit
+      - totalItems
+      - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          example: 20
+        totalItems:
+          type: integer
+          minimum: 0
+          example: 126
+        totalPages:
+          type: integer
+          minimum: 0
+          example: 7
+        sort:
+          type: string
+          nullable: true
+          example: createdAt
+        order:
+          type: string
+          enum:
+          - asc
+          - desc
+          nullable: true
+          example: desc
+    role_enum:
+      type: string
+      enum:
+      - TRAVAILLEUR
+      - RECRUTEUR
+      - AGENT
+      - ADMINISTRATEUR
+      description: Rôle principal de l’utilisateur.
+    statut_compte_enum:
+      type: string
+      enum:
+      - ACTIF
+      - SUSPENDU
+      - SUPPRIME
+      description: Statut du compte utilisateur.
+    type_recruteur_enum:
+      type: string
+      enum:
+      - PARTICULIER
+      - ENTREPRISE
+    niveau_zone_enum:
+      type: string
+      enum:
+      - REGION
+      - DEPARTEMENT
+      - COMMUNE
+      - QUARTIER
+    type_horaire_enum:
+      type: string
+      enum:
+      - TRAVAIL_JOURNALIER
+      - DEMI_JOURNEE
+      - CRENEAU_PRECIS
+    mode_attribution_enum:
+      type: string
+      enum:
+      - PREMIER_ARRIVE
+      - SELECTION
+    statut_mission_enum:
+      type: string
+      enum:
+      - BROUILLON
+      - PUBLIEE
+      - PARTIELLEMENT_POURVUE
+      - POURVUE
+      - EN_COURS
+      - TERMINEE
+      - ANNULEE
+      - EXPIREE
+      - SUSPENDUE
+      - CLOTUREE
+    statut_candidature_enum:
+      type: string
+      enum:
+      - PROPOSEE
+      - INTERESSE
+      - SELECTIONNEE
+      - CONFIRMEE
+      - REFUSEE
+      - EXPIREE
+      - ANNULEE
+      - LISTE_ATTENTE
+      - RETIREE
+    periode_dispo_enum:
+      type: string
+      enum:
+      - JOURNEE
+      - MATIN
+      - APRES_MIDI
+      - CRENEAU
+    canal_enum:
+      type: string
+      enum:
+      - APPLICATION
+      - WHATSAPP
+      - SMS
+      - APPEL
+    presence_enum:
+      type: string
+      enum:
+      - NON_SAISIE
+      - PRESENT
+      - ABSENT
+    statut_message_enum:
+      type: string
+      enum:
+      - EN_FILE
+      - ENVOYE
+      - LIVRE
+      - LU
+      - ECHEC
+    RegisterWorkerDto:
+      type: object
+      required:
+      - email
+      - password
+      - nom
+      - telephone
+      - langue
+      properties:
+        email:
+          type: string
+          format: email
+          example: worker@example.com
+        password:
+          type: string
+          format: password
+          example: StrongPass123!
+        nom:
+          type: string
+          example: Kouassi Jean
+        telephone:
+          type: string
+          example: '+2250701020304'
+        langue:
+          type: string
+          example: fr
+        metierIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example:
+          - 2d1c2f4d-6f3d-46e3-87ef-4c7df52995f5
+    RegisterRecruiterDto:
+      type: object
+      required:
+      - email
+      - password
+      - nom
+      - telephone
+      - langue
+      - typeRecruteur
+      - raisonSociale
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        nom:
+          type: string
+        telephone:
+          type: string
+        langue:
+          type: string
+        typeRecruteur:
+          $ref: '#/components/schemas/type_recruteur_enum'
+        raisonSociale:
+          type: string
+    LoginDto:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    ForgotPasswordDto:
+      type: object
+      required:
+      - email
+      properties:
+        email:
+          type: string
+          format: email
+    ResetPasswordDto:
+      type: object
+      required:
+      - token
+      - password
+      - passwordConfirmation
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          format: password
+        passwordConfirmation:
+          type: string
+          format: password
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/role_enum'
+        statut:
+          $ref: '#/components/schemas/statut_compte_enum'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProfileDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nom:
+          type: string
+        telephone:
+          type: string
+          nullable: true
+        role:
+          $ref: '#/components/schemas/role_enum'
+        statut:
+          $ref: '#/components/schemas/statut_compte_enum'
+        langue:
+          type: string
+        photoUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    WorkerProfileDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        scoreFiabilite:
+          type: number
+          format: double
+          nullable: true
+        possedeSonMateriel:
+          type: boolean
+        agentId:
+          type: string
+          format: uuid
+          nullable: true
+        profile:
+          $ref: '#/components/schemas/ProfileDto'
+    RecruiterProfileDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        typeRecruteur:
+          $ref: '#/components/schemas/type_recruteur_enum'
+        raisonSociale:
+          type: string
+        profile:
+          $ref: '#/components/schemas/ProfileDto'
+    AgentProfileDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        perimetre:
+          type: string
+          nullable: true
+        codeParrainage:
+          type: string
+          nullable: true
+        profile:
+          $ref: '#/components/schemas/ProfileDto'
+    MetierDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: MACON
+        libelle:
+          type: string
+          example: Maçon
+        categorie:
+          type: string
+          example: BTP
+        actif:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ZoneDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nom:
+          type: string
+        niveau:
+          $ref: '#/components/schemas/niveau_zone_enum'
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    CreateDisponibiliteDto:
+      type: object
+      required:
+      - travailleurId
+      - dateDisponibilite
+      - periode
+      properties:
+        travailleurId:
+          type: string
+          format: uuid
+        dateDisponibilite:
+          type: string
+          format: date
+        periode:
+          $ref: '#/components/schemas/periode_dispo_enum'
+        heureDebut:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        heureFin:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+    DisponibiliteDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        travailleurId:
+          type: string
+          format: uuid
+        dateDisponibilite:
+          type: string
+          format: date
+        periode:
+          $ref: '#/components/schemas/periode_dispo_enum'
+        heureDebut:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        heureFin:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        createdAt:
+          type: string
+          format: date-time
+    CreateMissionDto:
+      type: object
+      required:
+      - metierId
+      - zoneId
+      - description
+      - nombrePostes
+      - remunerationFcfa
+      - dateMission
+      - modeAttribution
+      - statut
+      properties:
+        recruteurId:
+          type: string
+          format: uuid
+        metierId:
+          type: string
+          format: uuid
+        zoneId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        nombrePostes:
+          type: integer
+          minimum: 1
+        remunerationFcfa:
+          type: integer
+          minimum: 1
+        dateMission:
+          type: string
+          format: date
+        datePublication:
+          type: string
+          format: date
+          nullable: true
+        dateCloture:
+          type: string
+          format: date
+          nullable: true
+        typeHoraire:
+          $ref: '#/components/schemas/type_horaire_enum'
+          nullable: true
+        heureDebut:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        heureFin:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        urgente:
+          type: boolean
+        modeAttribution:
+          $ref: '#/components/schemas/mode_attribution_enum'
+        statut:
+          $ref: '#/components/schemas/statut_mission_enum'
+    UpdateMissionDto:
+      type: object
+      properties:
+        description:
+          type: string
+        nombrePostes:
+          type: integer
+        remunerationFcfa:
+          type: integer
+        dateMission:
+          type: string
+          format: date
+        datePublication:
+          type: string
+          format: date
+        dateCloture:
+          type: string
+          format: date
+        typeHoraire:
+          $ref: '#/components/schemas/type_horaire_enum'
+        heureDebut:
+          type: string
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        heureFin:
+          type: string
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        urgente:
+          type: boolean
+        modeAttribution:
+          $ref: '#/components/schemas/mode_attribution_enum'
+        statut:
+          $ref: '#/components/schemas/statut_mission_enum'
+    MissionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        recruteurId:
+          type: string
+          format: uuid
+        metierId:
+          type: string
+          format: uuid
+        zoneId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        nombrePostes:
+          type: integer
+        remunerationFcfa:
+          type: integer
+        dateMission:
+          type: string
+          format: date
+        datePublication:
+          type: string
+          format: date
+          nullable: true
+        dateCloture:
+          type: string
+          format: date
+          nullable: true
+        typeHoraire:
+          $ref: '#/components/schemas/type_horaire_enum'
+          nullable: true
+        heureDebut:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        heureFin:
+          type: string
+          nullable: true
+          pattern: ^\d{2}:\d{2}(:\d{2})?$
+        urgente:
+          type: boolean
+        modeAttribution:
+          $ref: '#/components/schemas/mode_attribution_enum'
+        statut:
+          $ref: '#/components/schemas/statut_mission_enum'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateCandidatureDto:
+      type: object
+      required:
+      - missionId
+      - travailleurId
+      properties:
+        missionId:
+          type: string
+          format: uuid
+        travailleurId:
+          type: string
+          format: uuid
+        canal:
+          $ref: '#/components/schemas/canal_enum'
+    CandidatureDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        missionId:
+          type: string
+          format: uuid
+        travailleurId:
+          type: string
+          format: uuid
+        statut:
+          $ref: '#/components/schemas/statut_candidature_enum'
+        canal:
+          $ref: '#/components/schemas/canal_enum'
+        dateReponse:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    EvaluationDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        missionId:
+          type: string
+          format: uuid
+        auteurId:
+          type: string
+          format: uuid
+        cibleId:
+          type: string
+          format: uuid
+        note:
+          type: integer
+          minimum: 1
+          maximum: 5
+        commentaire:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    NotificationDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        utilisateurId:
+          type: string
+          format: uuid
+        missionId:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+        canal:
+          $ref: '#/components/schemas/canal_enum'
+        statut:
+          $ref: '#/components/schemas/statut_message_enum'
+        idMessageExterne:
+          type: string
+          nullable: true
+        dateEnvoi:
+          type: string
+          format: date-time
+          nullable: true
+        lu:
+          type: boolean
+        luAt:
+          type: string
+          format: date-time
+          nullable: true
+        clickedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    CommissionDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        travailleurId:
+          type: string
+          format: uuid
+        missionId:
+          type: string
+          format: uuid
+        montantBrut:
+          type: integer
+          format: int64
+        pourcentage:
+          type: number
+          format: double
+        montantCommission:
+          type: integer
+          format: int64
+        montantNet:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+    DashboardPublicDto:
+      type: object
+      properties:
+        workers:
+          type: integer
+        recruiters:
+          type: integer
+        missions:
+          type: integer
+        placements:
+          type: integer
+    DashboardWorkerDto:
+      type: object
+      properties:
+        missionsCompleted:
+          type: integer
+        missionsPending:
+          type: integer
+        grossRevenue:
+          type: integer
+          format: int64
+        platformCommission:
+          type: integer
+          format: int64
+        netRevenue:
+          type: integer
+          format: int64
+        scoreFiabilite:
+          type: number
+          format: double
+    DashboardRecruiterDto:
+      type: object
+      properties:
+        missionsPublished:
+          type: integer
+        activeCandidates:
+          type: integer
+        pendingResponses:
+          type: integer
+        totalRevenue:
+          type: integer
+          format: int64
+    DashboardAgentDto:
+      type: object
+      properties:
+        assignedWorkers:
+          type: integer
+        proposalsSent:
+          type: integer
+        acceptedProposals:
+          type: integer
+        activeMissions:
+          type: integer
+    DashboardAdminDto:
+      type: object
+      properties:
+        workersRegistered:
+          type: integer
+        recruitersRegistered:
+          type: integer
+        agentsRegistered:
+          type: integer
+        missionsPublished:
+          type: integer
+        missionsCompleted:
+          type: integer
+        totalRevenue:
+          type: integer
+          format: int64
+        totalCommissions:
+          type: integer
+          format: int64
+    BootstrapDto:
+      type: object
+      properties:
+        metiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetierDto'
+        zones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneDto'
+        settings:
+          type: object
+          additionalProperties: true
+    MissionProposalMessageDto:
+      type: object
+      required:
+      - to
+      - missionId
+      - message
+      properties:
+        to:
+          type: string
+          example: '+2250701010101'
+        missionId:
+          type: string
+          format: uuid
+        message:
+          type: string
+          example: Votre candidature a été retenue pour la mission de maçon.
+    MissionConfirmationMessageDto:
+      type: object
+      required:
+      - to
+      - missionId
+      - message
+      properties:
+        to:
+          type: string
+          example: '+2250701010101'
+        missionId:
+          type: string
+          format: uuid
+        message:
+          type: string
+          example: Votre mission est confirmée pour demain à 08h00.
