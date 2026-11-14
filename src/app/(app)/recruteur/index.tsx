@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError } from '../../../api/client';
-import { useDashboard, useMissions } from '../../../api/hooks';
+import { useMissions, useRecruiterDashboard } from '../../../api/hooks';
 import { useReference } from '../../../api/reference';
 import { useSession } from '../../../auth/session';
+import { fdate, STATUT_CANDIDATURE, STATUT_MISSION } from '../../../lib/format';
 import { radius } from '../../../theme/tokens';
 import { useTheme } from '../../../theme/useTheme';
 import { AppText } from '../../../ui/AppText';
@@ -14,34 +15,43 @@ import { Button } from '../../../ui/Button';
 import { Card } from '../../../ui/Card';
 import { HeroCard } from '../../../ui/HeroCard';
 import { MissionCard } from '../../../ui/MissionCard';
+import { StatGrid, StatItem } from '../../../ui/StatGrid';
 
-const STATS: Record<string, { key: string; label: string }[]> = {
-  RECRUTEUR: [{ key: 'missionsPublished', label: 'Missions publiées' }, { key: 'activeCandidates', label: 'Candidats' }, { key: 'pendingResponses', label: 'En attente' }],
-  TRAVAILLEUR: [{ key: 'missionsPending', label: 'À venir' }, { key: 'missionsCompleted', label: 'Terminées' }],
-};
+type RecentMission = { id: string; description: string; dateMission: string; statut: string; metier: string; zone: string; candidatesCount: number };
+type RecentApplication = { id: string; statut: string; createdAt: string; missionId: string; workerName: string; mission: string };
 
-export default function Accueil() {
+// Tableau de bord recruteur : ses missions, ses candidats, ses urgences.
+export default function RecruteurAccueil() {
   const t = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { profil } = useSession();
-  const worker = profil?.role === 'TRAVAILLEUR';
   const ref = useReference();
   const q = useMissions();
-  const dash = useDashboard();
+  const dash = useRecruiterDashboard();
   const [recherche, setRecherche] = useState('');
   const [page, setPage] = useState(0);
 
   const prenom = (profil?.nom ?? '').split(' ')[0];
   const initiales = (profil?.nom ?? profil?.email ?? '?').split(/[ @]/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const f = recherche.trim().toLowerCase();
-  const missions = (q.data ?? []).filter((m) => `${m.metier} ${m.zone}`.toLowerCase().includes(f));
+  const missions = (q.data ?? []).filter((m) => `${m.metier} ${m.zone} ${m.lieu ?? ''}`.toLowerCase().includes(f));
   const vedettes = missions.filter((m) => ['PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE'].includes(m.statut)).slice(0, 5);
   const cardW = Math.min(width - 56, 420);
   const open = (id: string) => router.push({ pathname: '/mission/[id]', params: { id } });
-  const stats = (STATS[profil?.role ?? ''] ?? []).filter((s) => typeof dash.data?.[s.key] === 'number');
-  const error = q.error ?? ref.error;
+  const d = dash.data ?? {};
+  const ds = d.stats ?? {};
+  const recentMissions: RecentMission[] = Array.isArray(d.recentMissions) ? d.recentMissions : [];
+  const recentApplications: RecentApplication[] = Array.isArray(d.recentApplications) ? d.recentApplications : [];
+  const stats: StatItem[] = [
+    { key: 'active', label: 'Missions actives', value: ds.activeMissions, icon: 'briefcase-outline' },
+    { key: 'completed', label: 'Missions terminées', value: ds.completedMissions, icon: 'checkmark-done-outline' },
+    { key: 'candidates', label: 'Candidatures reçues', value: ds.candidatesTotal, icon: 'people-outline' },
+    { key: 'confirmed', label: 'Travailleurs confirmés', value: ds.confirmedWorkers, icon: 'shield-checkmark-outline' },
+    { key: 'urgent', label: 'Missions urgentes', value: ds.missionsUrgentes, icon: 'flash-outline', accent: 'amber' },
+  ];
+  const error = q.error ?? ref.error ?? dash.error;
   const refresh = () => { q.refetch(); dash.refetch(); };
 
   return (
@@ -50,18 +60,46 @@ export default function Accueil() {
       <View style={[s.head, s.pad]}>
         <View style={{ flex: 1 }}>
           <AppText variant="display" numberOfLines={2}>Bonjour{prenom ? `, ${prenom}` : ''} !</AppText>
-          <AppText muted>{worker ? 'Les missions près de chez vous.' : 'Vos annonces et vos candidats.'}</AppText>
+          <AppText muted>Vos annonces et vos candidats.</AppText>
         </View>
         <View style={[s.avatar, { backgroundColor: t.sun }]}><AppText variant="heading" color="#14201c">{initiales}</AppText></View>
       </View>
 
-      {stats.length > 0 && (
-        <View style={[s.pad, s.stats]}>
-          {stats.map((st) => (
-            <View key={st.key} style={[s.stat, { backgroundColor: t.card, borderColor: t.line }]}>
-              <AppText variant="title" color={t.brand}>{dash.data![st.key]}</AppText>
-              <AppText variant="caption" muted>{st.label}</AppText>
-            </View>
+      <View style={s.pad}><StatGrid items={stats} /></View>
+
+      <View style={[s.pad, s.actions]}>
+        <View style={{ flex: 1 }}><Button label="Publier une mission" icon="add" onPress={() => router.navigate('/recruteur/publier')} /></View>
+        <View style={{ flex: 1 }}><Button label="Actualiser" icon="refresh" variant="secondary" onPress={refresh} /></View>
+      </View>
+
+      {recentApplications.length > 0 && (
+        <View style={[s.pad, { gap: 10 }]}>
+          <AppText variant="heading">Dernières candidatures</AppText>
+          {recentApplications.slice(0, 5).map((a) => (
+            <Card key={a.id} style={{ padding: 14, gap: 4 }}>
+              <View style={s.titleRow}>
+                <AppText variant="label" numberOfLines={1}>{a.workerName}</AppText>
+                <AppText variant="caption" color={t.brand}>{STATUT_CANDIDATURE[a.statut] ?? a.statut}</AppText>
+              </View>
+              <AppText variant="caption" muted numberOfLines={1}>{a.mission}</AppText>
+              <Button label="Voir la mission" variant="ghost" icon="chevron-forward" onPress={() => open(a.missionId)} />
+            </Card>
+          ))}
+        </View>
+      )}
+
+      {recentMissions.length > 0 && (
+        <View style={[s.pad, { gap: 10 }]}>
+          <AppText variant="heading">Vos dernières missions</AppText>
+          {recentMissions.map((m) => (
+            <Card key={m.id} style={{ padding: 14, gap: 4 }}>
+              <View style={s.titleRow}>
+                <AppText variant="label" numberOfLines={1}>{m.metier} · {m.zone}</AppText>
+                <AppText variant="caption" color={t.brand}>{STATUT_MISSION[m.statut] ?? m.statut}</AppText>
+              </View>
+              <AppText variant="caption" muted numberOfLines={1}>{fdate(m.dateMission)} · {m.candidatesCount} candidat{m.candidatesCount > 1 ? 's' : ''}</AppText>
+              <Button label="Ouvrir" variant="ghost" icon="chevron-forward" onPress={() => open(m.id)} />
+            </Card>
           ))}
         </View>
       )}
@@ -99,14 +137,14 @@ export default function Accueil() {
       {q.isSuccess && (
         <View style={[s.pad, { gap: 12 }]}>
           <View style={s.titleRow}>
-            <AppText variant="heading">{worker ? 'Annonces près de chez vous' : 'Vos annonces'}</AppText>
+            <AppText variant="heading">Toutes vos annonces</AppText>
             <AppText variant="caption" muted>{missions.length} annonce{missions.length > 1 ? 's' : ''}</AppText>
           </View>
           {missions.length === 0 ? (
             <Card>
-              <AppText variant="heading">{f ? 'Aucun résultat' : worker ? 'Aucune annonce pour le moment' : 'Pas encore de mission'}</AppText>
-              <AppText muted>{f ? 'Essayez un autre mot.' : worker ? 'Revenez bientôt, de nouvelles missions arrivent.' : 'Publiez votre premier besoin en deux minutes.'}</AppText>
-              {!worker && !f && <Button label="Publier une mission" icon="add" large onPress={() => router.navigate('/recruteur/publier')} />}
+              <AppText variant="heading">{f ? 'Aucun résultat' : 'Pas encore de mission'}</AppText>
+              <AppText muted>{f ? 'Essayez un autre mot.' : 'Publiez votre premier besoin en deux minutes.'}</AppText>
+              {!f && <Button label="Publier une mission" icon="add" large onPress={() => router.navigate('/recruteur/publier')} />}
             </Card>
           ) : missions.map((m) => <MissionCard key={m.id} mission={m} onPress={() => open(m.id)} />)}
         </View>
@@ -116,15 +154,14 @@ export default function Accueil() {
 }
 
 const s = StyleSheet.create({
-  body: { paddingBottom: 130, gap: 20 },
+  body: { paddingBottom: 130, gap: 20, maxWidth: 1120, width: '100%', alignSelf: 'center' },
   pad: { paddingHorizontal: 20 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  stats: { flexDirection: 'row', gap: 10 },
-  stat: { flex: 1, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: 12, alignItems: 'center' },
+  actions: { flexDirection: 'row', gap: 10 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: radius.pill, marginHorizontal: 20, paddingHorizontal: 18, minHeight: 56 },
   input: { flex: 1, fontSize: 16, paddingVertical: 12 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
   dot: { height: 8, borderRadius: 4 },
-  titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
 });

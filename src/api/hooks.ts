@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../auth/session';
 import { fetchDashboard } from './auth';
-import { listCandidatures } from './candidatures';
+import { getCandidature, listCandidatures } from './candidatures';
 import { listDisponibilites } from './disponibilites';
 import { getMission, listMissions } from './missions';
 import { useReference } from './reference';
-import { getAgentDashboard, getAgentProfile, getAgentWorkers, getRecruiterDashboard, getRecruiterProfile, getWorkerCommissions, getWorkerEarnings, getWorkerProfile, getWorkerStats, markAllNotificationsRead, markNotificationRead, updateAgentProfile, updateRecruiterProfile, updateWorkerProfile } from './roles';
+import { getAgentDashboard, getAgentProfile, getAgentWorkers, getPublicWorker, getRecruiterDashboard, getRecruiterProfile, getWorkerApplications, getWorkerCommissions, getWorkerEarnings, getWorkerMissions, getWorkerProfile, getWorkerStats, markAllNotificationsRead, markNotificationRead, updateAgentProfile, updateRecruiterProfile, updateWorkerProfile } from './roles';
 import { getNotification, listNotifications, unreadCount } from './notifications';
 
 export function useMissions() {
@@ -23,9 +23,9 @@ export function useMission(id?: string) {
   return useQuery({ queryKey: ['mission', id], enabled: !!ref.data && !!id, queryFn: () => getMission(id!, ref.data!) });
 }
 
-export function useCandidatures(missionId?: string) {
+export function useCandidatures(missionId?: string, enabled = true) {
   const { profil } = useSession();
-  return useQuery({ queryKey: ['candidatures', missionId ?? 'toutes', profil?.id], enabled: !!profil, queryFn: () => listCandidatures(missionId) });
+  return useQuery({ queryKey: ['candidatures', missionId ?? 'toutes', profil?.id], enabled: !!profil && enabled, queryFn: () => listCandidatures(missionId) });
 }
 
 export function useDashboard() {
@@ -48,15 +48,19 @@ export function useNotificationActions() {
     readAll: useMutation({ mutationFn: markAllNotificationsRead, onSuccess: () => { qc.invalidateQueries({ queryKey: ['notifications'] }); } }),
   };
 }
-export const useWorkerProfile = () => useQuery({ queryKey: ['worker-profile'], queryFn: getWorkerProfile });
-export const useWorkerStats = () => useQuery({ queryKey: ['worker-stats'], queryFn: getWorkerStats });
-export const useWorkerEarnings = () => useQuery({ queryKey: ['worker-earnings'], queryFn: getWorkerEarnings });
-export const useWorkerCommissions = () => useQuery({ queryKey: ['worker-commissions'], queryFn: getWorkerCommissions });
+export const useWorkerProfile = (enabled = true) => useQuery({ queryKey: ['worker-profile'], enabled, queryFn: getWorkerProfile });
+export const useWorkerStats = (enabled = true) => useQuery({ queryKey: ['worker-stats'], enabled, queryFn: getWorkerStats });
+export const useWorkerEarnings = (enabled = true) => useQuery({ queryKey: ['worker-earnings'], enabled, queryFn: getWorkerEarnings });
+export const useWorkerCommissions = (enabled = true) => useQuery({ queryKey: ['worker-commissions'], enabled, queryFn: getWorkerCommissions });
+export const useWorkerApplications = (enabled = true) => useQuery({ queryKey: ['worker-applications'], enabled, queryFn: getWorkerApplications });
+export const useWorkerMissions = (enabled = true) => useQuery({ queryKey: ['worker-missions'], enabled, queryFn: getWorkerMissions });
+export const usePublicWorker = (id?: string) => useQuery({ queryKey: ['worker-public', id], enabled: !!id, queryFn: () => getPublicWorker(id!) });
+export const useCandidature = (id?: string) => useQuery({ queryKey: ['candidature', id], enabled: !!id, queryFn: () => getCandidature(id!) });
 export const useWorkerProfileMutation = () => { const qc = useQueryClient(); return useMutation({ mutationFn: updateWorkerProfile, onSuccess: () => qc.invalidateQueries({ queryKey: ['worker-profile'] }) }); };
-export const useRecruiterProfile = () => useQuery({ queryKey: ['recruiter-profile'], queryFn: getRecruiterProfile });
+export const useRecruiterProfile = (enabled = true) => useQuery({ queryKey: ['recruiter-profile'], enabled, queryFn: getRecruiterProfile });
 export const useRecruiterDashboard = () => useQuery({ queryKey: ['recruiter-dashboard'], queryFn: getRecruiterDashboard });
 export const useRecruiterProfileMutation = () => { const qc = useQueryClient(); return useMutation({ mutationFn: updateRecruiterProfile, onSuccess: () => qc.invalidateQueries({ queryKey: ['recruiter-profile'] }) }); };
 export const useAgentProfile = () => useQuery({ queryKey: ['agent-profile'], queryFn: getAgentProfile });
 export const useAgentDashboard = () => useQuery({ queryKey: ['agent-dashboard'], queryFn: getAgentDashboard });
-export const useAgentWorkers = () => useQuery({ queryKey: ['agent-workers'], queryFn: () => getAgentWorkers() });
+export const useAgentWorkers = () => useQuery({ queryKey: ['agent-workers'], queryFn: () => getAgentWorkers(1, 100) });
 export const useAgentProfileMutation = () => { const qc = useQueryClient(); return useMutation({ mutationFn: updateAgentProfile, onSuccess: () => qc.invalidateQueries({ queryKey: ['agent-profile'] }) }); };

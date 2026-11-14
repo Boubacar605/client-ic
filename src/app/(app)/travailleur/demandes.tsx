@@ -83,7 +83,7 @@ export default function Demandes() {
 }
 
 const s = StyleSheet.create({
-  body: { padding: 20, paddingBottom: 140, gap: 16 },
+  body: { padding: 20, paddingBottom: 140, gap: 16, maxWidth: 760, width: '100%', alignSelf: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   bigIcon: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center' },
 });

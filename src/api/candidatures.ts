@@ -17,3 +17,4 @@ export const selectCandidature = (id: string) => api.post(`/applications/${id}/s
 export const rejectCandidature = (id: string) => api.post(`/applications/${id}/reject`);
 export const confirmCandidature = (id: string) => api.post(`/applications/${id}/confirm`);
 export const withdrawCandidature = (id: string) => api.post(`/applications/${id}/withdraw`);
+export const getCandidature = (id: string) => api.get(`/applications/${id}`).then((r) => unwrap<any>(r));

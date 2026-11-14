@@ -1,7 +1,7 @@
 import type { TypeHoraire } from '../api/types';
 
 export interface MissionForm {
-  metierId: string | null; zoneId: string | null; nombrePostes: number; dateMission: string;
+  metierId: string | null; zoneId: string | null; lieu: string; nombrePostes: number; dateMission: string;
   typeHoraire: TypeHoraire; heureDebut: string; heureFin: string; remunerationFcfa: string; urgente: boolean; description: string;
 }
 
@@ -19,6 +19,7 @@ export function validateMission(f: MissionForm, today = isoLocal(new Date())): R
   if (!/^\d+$/.test(f.remunerationFcfa.replace(/\s/g, '')) || n < 1) e.remunerationFcfa = 'Indiquez le paiement par personne, en FCFA.';
   else if (n > 1_000_000) e.remunerationFcfa = 'Ce montant semble trop élevé : vérifiez.';
   if (f.description.length > 1000) e.description = '1 000 caractères au plus.';
+  if (f.lieu.length > 255) e.lieu = '255 caractères au plus.';
   return e;
 }
 

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '../auth/session';
+import { radius } from '../theme/tokens';
 import { useTheme } from '../theme/useTheme';
 import { AppText } from './AppText';
 import { Button } from './Button';
@@ -11,6 +12,9 @@ import { Card } from './Card';
 import { TextField } from './TextField';
 import { ErrorBox } from './ErrorBox';
 import { useRecruiterProfile, useRecruiterProfileMutation, useWorkerCommissions, useWorkerEarnings, useWorkerProfile, useWorkerProfileMutation, useWorkerStats } from '../api/hooks';
+import { useReference } from '../api/reference';
+import { MetierThumb } from './MetierThumb';
+import { MetierTile } from './MetierTile';
 import { ProfilePhotoCard } from './ProfilePhotoCard';
 
 const ROLE: Record<string, string> = { TRAVAILLEUR: 'Travailleur', RECRUTEUR: 'Recruteur', AGENT: 'Agent', ADMINISTRATEUR: 'Administrateur' };
@@ -23,18 +27,26 @@ export function ProfilView() {
   const { profil, signOut } = useSession();
   const worker = profil?.role === 'TRAVAILLEUR';
   const recruiter = profil?.role === 'RECRUTEUR';
-  const wp = useWorkerProfile();
-  const ws = useWorkerStats();
-  const we = useWorkerEarnings();
-  const wc = useWorkerCommissions();
-  const rp = useRecruiterProfile();
+  const wp = useWorkerProfile(worker);
+  const ws = useWorkerStats(worker);
+  const we = useWorkerEarnings(worker);
+  const wc = useWorkerCommissions(worker);
+  const rp = useRecruiterProfile(recruiter);
+  const ref = useReference();
   const updateWorker = useWorkerProfileMutation();
   const updateRecruiter = useRecruiterProfileMutation();
   const [raisonSociale, setRaisonSociale] = useState('');
   const [langue, setLangue] = useState('fr');
   const [materiel, setMateriel] = useState(false);
+  const [metierIds, setMetierIds] = useState<string[]>([]);
+  const [zoneIds, setZoneIds] = useState<string[]>([]);
+  const [editMetiers, setEditMetiers] = useState(false);
+  const [editZones, setEditZones] = useState(false);
   useEffect(() => { if (rp.data) setRaisonSociale(rp.data.raisonSociale); }, [rp.data]);
-  useEffect(() => { if (wp.data) { setLangue(wp.data.langue); setMateriel(wp.data.possedeSonMateriel); } }, [wp.data]);
+  useEffect(() => { if (wp.data) { setLangue(wp.data.langue); setMateriel(wp.data.possedeSonMateriel); setMetierIds(wp.data.metiers.map((m) => m.id)); setZoneIds(wp.data.zones.map((z) => z.id)); } }, [wp.data?.id]);
+  const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+  const zoneById = ref.data?.zoneById;
+  const metierById = ref.data?.metierById;
   const initiales = (profil?.nom ?? profil?.email ?? '?').split(/[ @]/).map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   return (
     <ScrollView style={{ backgroundColor: t.bg }} contentContainerStyle={[s.body, { paddingTop: insets.top + 16 }]}>
@@ -46,6 +58,12 @@ export function ProfilView() {
           <View style={{ flex: 1 }}>
             <AppText variant="heading" numberOfLines={1}>{profil?.nom ?? 'Mon compte'}</AppText>
             <View style={[s.pill, { backgroundColor: t.soft }]}><AppText variant="caption" color={t.brand}>{ROLE[profil?.role ?? ''] ?? profil?.role}</AppText></View>
+            {(profil?.role === 'RECRUTEUR' || profil?.role === 'AGENT') && (
+              <View style={[s.pill, { backgroundColor: profil?.isPremium ? t.sunSoft : t.soft }]}>
+                <Ionicons name={profil?.isPremium ? 'star' : 'star-outline'} size={13} color={profil?.isPremium ? t.amber : t.muted} />
+                <AppText variant="caption" color={profil?.isPremium ? t.amber : t.muted}>{profil?.isPremium ? 'Compte Premium' : 'Compte standard'}</AppText>
+              </View>
+            )}
           </View>
         </View>
         <View style={s.row}><Ionicons name="mail-outline" size={20} color={t.muted} /><AppText muted>{profil?.email}</AppText></View>
@@ -65,8 +83,47 @@ export function ProfilView() {
         <AppText variant="heading">Préférences travailleur</AppText>
         <TextField label="Langue" value={langue} onChangeText={setLangue} />
         <Button label={materiel ? 'Matériel disponible' : 'Pas de matériel'} variant="secondary" icon={materiel ? 'checkmark-circle-outline' : 'close-circle-outline'} onPress={() => setMateriel((v) => !v)} />
+
+        <View style={{ gap: 8 }}>
+          <View style={s.row}><AppText variant="label" style={{ flex: 1 }}>Mes métiers ({metierIds.length})</AppText>
+            <Button label={editMetiers ? 'Terminer' : 'Modifier'} variant="ghost" onPress={() => setEditMetiers((v) => !v)} /></View>
+          {metierIds.length > 0
+            ? <View style={s.wrap}>{metierIds.map((id) => <View key={id} style={[s.chip, { backgroundColor: t.soft }]}><MetierThumb metier={metierById?.get(id)?.libelle ?? ''} size={22} radius={7} /><AppText variant="caption" color={t.brand} style={{ fontWeight: '700' }}>{metierById?.get(id)?.libelle ?? 'Métier'}</AppText></View>)}</View>
+            : <AppText muted variant="caption">Aucun métier sélectionné : choisissez-en au moins un pour recevoir des missions.</AppText>}
+          {editMetiers && (
+            <View style={s.grid}>
+              {(ref.data?.metiers ?? []).map((m) => (
+                <MetierTile key={m.id} metier={m.libelle} width={86} selected={metierIds.includes(m.id)} onPress={() => setMetierIds((prev) => toggle(prev, m.id))} />
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={{ gap: 8 }}>
+          <View style={s.row}><AppText variant="label" style={{ flex: 1 }}>Mes zones ({zoneIds.length})</AppText>
+            <Button label={editZones ? 'Terminer' : 'Modifier'} variant="ghost" onPress={() => setEditZones((v) => !v)} /></View>
+          {zoneIds.length > 0
+            ? <View style={s.wrap}>{zoneIds.map((id) => <View key={id} style={[s.chip, { backgroundColor: t.soft }]}><Ionicons name="location-outline" size={14} color={t.brand} /><AppText variant="caption" color={t.brand} style={{ fontWeight: '700' }}>{zoneById?.get(id)?.nom ?? 'Zone'}</AppText></View>)}</View>
+            : <AppText muted variant="caption">Aucune zone : indiquez où vous pouvez travailler.</AppText>}
+          {editZones && (
+            <View style={s.wrap}>
+              {(ref.data?.zones ?? []).map((z) => {
+                const on = zoneIds.includes(z.id);
+                return (
+                  <Pressable key={z.id} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={z.nom}
+                    onPress={() => setZoneIds((prev) => toggle(prev, z.id))}
+                    style={[s.chip, { borderWidth: 1, borderColor: on ? t.brand : t.line, backgroundColor: on ? t.soft : t.card }]}>
+                    <AppText variant="caption" color={on ? t.brand : t.muted} style={on ? { fontWeight: '700' } : undefined}>{z.nom}</AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
         {updateWorker.error ? <ErrorBox message="Impossible d’enregistrer le profil." /> : null}
-        <Button label="Enregistrer mes préférences" loading={updateWorker.isPending} onPress={() => updateWorker.mutate({ langue, possedeSonMateriel: materiel, metierIds: wp.data!.metiers.map((m) => m.id), zoneIds: wp.data!.zones.map((z) => z.id) })} />
+        <Button label="Enregistrer mes préférences" loading={updateWorker.isPending} disabled={metierIds.length === 0}
+          onPress={() => updateWorker.mutate({ langue, possedeSonMateriel: materiel, metierIds, zoneIds })} />
       </Card> : null}
       {recruiter && rp.data ? <Card>
         <AppText variant="heading">Profil recruteur</AppText>
@@ -84,9 +141,12 @@ export function ProfilView() {
   );
 }
 const s = StyleSheet.create({
-  body: { padding: 20, paddingBottom: 140, gap: 16 },
+  body: { padding: 20, paddingBottom: 140, gap: 16, maxWidth: 760, width: '100%', alignSelf: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stats: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
-  pill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99, marginTop: 4 },
+  pill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99, marginTop: 4 },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill },
 });

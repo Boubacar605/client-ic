@@ -14,3 +14,7 @@ export const unreadCount = () => api.get('/notifications/unread-count').then((r)
 export const markAllNotificationsRead = () => api.patch('/notifications/read-all').then((r) => unwrap<{ count: number }>(r));
 export const getNotification = (id: string) => api.get(`/notifications/${id}`).then((r) => unwrap<Notification & { events?: unknown[] }>(r));
 export const markNotificationRead = (id: string) => api.patch(`/notifications/${id}/read`).then((r) => unwrap<Notification>(r));
+
+/** Diffusion d'une mission à des travailleurs ciblés (15 maximum). */
+export const broadcastMission = (missionId: string, workerIds: string[]) =>
+  api.post('/notifications/mission-broadcast', { missionId, workerIds }).then((r) => unwrap<any>(r));

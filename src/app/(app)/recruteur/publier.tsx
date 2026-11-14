@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError, fieldErrors } from '../../../api/client';
 import { createMission } from '../../../api/missions';
@@ -19,13 +19,13 @@ import { ChoiceCard } from '../../../ui/ChoiceCard';
 import { DayPicker } from '../../../ui/DayPicker';
 import { ErrorBox } from '../../../ui/ErrorBox';
 import { HourPicker } from '../../../ui/HourPicker';
-import { MetierTile } from '../../../ui/MetierTile';
+import { MetierPicker } from '../../../ui/MetierPicker';
 import { Section } from '../../../ui/Section';
 import { Stepper } from '../../../ui/Stepper';
 import { TextField } from '../../../ui/TextField';
 
 const demain = () => isoLocal(new Date(Date.now() + 86_400_000));
-const blank = (): MissionForm => ({ metierId: null, zoneId: null, nombrePostes: 1, dateMission: demain(), typeHoraire: 'TRAVAIL_JOURNALIER',
+const blank = (): MissionForm => ({ metierId: null, zoneId: null, lieu: '', nombrePostes: 1, dateMission: demain(), typeHoraire: 'TRAVAIL_JOURNALIER',
   heureDebut: '08:00', heureFin: '12:00', remunerationFcfa: '', urgente: false, description: '' });
 const PRESETS = ['5000', '7500', '10000', '15000', '20000'];
 const spaced = (v: string) => v.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -36,7 +36,9 @@ function Body({ children, scrollRef }: { children: React.ReactNode; scrollRef: R
   const insets = useSafeAreaInsets();
   return (
     <ScrollView ref={scrollRef} style={{ backgroundColor: t.bg }} keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[s.body, { paddingTop: insets.top + 16 }]}>{children}</ScrollView>
+      contentContainerStyle={[s.body, { paddingTop: insets.top + 16 }]}>
+      <View style={s.column}>{children}</View>
+    </ScrollView>
   );
 }
 
@@ -45,7 +47,6 @@ export default function Publier() {
   const t = useTheme();
   const router = useRouter();
   const qc = useQueryClient();
-  const { width } = useWindowDimensions();
   const { profil } = useSession();
   const ref = useReference();
   const scroll = useRef<ScrollView>(null);
@@ -56,7 +57,6 @@ export default function Publier() {
   const [doneId, setDoneId] = useState<string | null>(null);
 
   const set = <K extends keyof MissionForm>(k: K, v: MissionForm[K]) => { setF((p) => ({ ...p, [k]: v })); setErr((p) => ({ ...p, [k]: '' })); };
-  const tile = Math.min((width - 40 - 12) / 2, 200);
   const top = () => scroll.current?.scrollTo({ y: 0, animated: true });
 
   async function submit() {
@@ -104,12 +104,20 @@ export default function Publier() {
       {apiErr && <ErrorBox message={apiErr.title} code={apiErr.code} />}
       {summary > 0 && !apiErr && <ErrorBox message="Corrigez les éléments en rouge pour continuer." />}
 
-      <Section n={1} title="Quel travail ?" hint="Touchez l’image du métier." error={err.metierId}>
-        <View style={s.grid}>{metiers.map((m) => <MetierTile key={m.id} metier={m.libelle} width={tile} selected={f.metierId === m.id} onPress={() => set('metierId', m.id)} />)}</View>
+      <Section n={1} title="Quel travail ?" hint="Ouvrez la liste et choisissez le métier." error={err.metierId}>
+        <MetierPicker
+          options={metiers.map((m) => ({ key: m.id, label: m.libelle, categorie: m.categorie }))}
+          value={f.metierId}
+          onChange={(key) => set('metierId', key)}
+          placeholder="Sélectionner un métier"
+          error={err.metierId}
+        />
       </Section>
 
-      <Section n={2} title="Où ?" hint="Le quartier de la mission." error={err.zoneId}>
+      <Section n={2} title="Où ?" hint="Le quartier et, si besoin, le lieu exact." error={err.zoneId}>
         <ChipGroup value={f.zoneId} onChange={(v) => set('zoneId', v)} options={zones.map((z) => ({ value: z.id, label: z.nom }))} />
+        <TextField label="Lieu précis (facultatif)" icon="location-outline" placeholder="Ex. Rue 12, près de la mosquée"
+          value={f.lieu} onChangeText={(v) => set('lieu', v)} error={err.lieu} maxLength={255} />
       </Section>
 
       <Section n={3} title="Combien de personnes ?" error={err.nombrePostes}>
@@ -164,8 +172,8 @@ export default function Publier() {
 }
 
 const s = StyleSheet.create({
-  body: { padding: 20, paddingBottom: 140, gap: 24 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  body: { paddingBottom: 140 },
+  column: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingHorizontal: 20, gap: 24 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   note: { borderWidth: 1.5, borderRadius: radius.lg, padding: 14 },
   bigIcon: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center' },

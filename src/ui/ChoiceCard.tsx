@@ -11,10 +11,11 @@ type Props = {
   subtitle: string;
   selected: boolean;
   onPress: () => void;
+  badge?: string;
 };
 
 // Grande carte à choisir : l'icône permet de comprendre sans lire.
-export function ChoiceCard({ icon, title, subtitle, selected, onPress }: Props) {
+export function ChoiceCard({ icon, title, subtitle, selected, onPress, badge }: Props) {
   const t = useTheme();
   return (
     <Pressable
@@ -28,7 +29,10 @@ export function ChoiceCard({ icon, title, subtitle, selected, onPress }: Props) 
         <Ionicons name={icon} size={28} color={selected ? t.onBrand : t.brand} />
       </View>
       <View style={{ flex: 1 }}>
-        <AppText variant="label">{title}</AppText>
+        <View style={s.titleRow}>
+          <AppText variant="label">{title}</AppText>
+          {badge ? <View style={[s.badge, { backgroundColor: t.sunSoft }]}><AppText variant="caption" color={t.amber} style={{ fontWeight: '700' }}>{badge}</AppText></View> : null}
+        </View>
         <AppText variant="caption" muted>{subtitle}</AppText>
       </View>
       {selected && <Ionicons name="checkmark-circle" size={26} color={t.brand} />}
@@ -39,4 +43,6 @@ export function ChoiceCard({ icon, title, subtitle, selected, onPress }: Props) 
 const s = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.xl, borderWidth: 2 },
   icon: { width: 52, height: 52, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 99 },
 });

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
-import { login, registerRecruiter, registerWorker } from '../../api/auth';
+import { login, registerAgent, registerRecruiter, registerWorker } from '../../api/auth';
 import { ApiError, fieldErrors } from '../../api/client';
 import { useSession } from '../../auth/session';
 import { COUNTRY_PREFIX } from '../../config';
@@ -16,7 +16,7 @@ import { Segmented } from '../../ui/Segmented';
 import { TextField } from '../../ui/TextField';
 import { useRouter } from 'expo-router';
 
-type Role = 'TRAVAILLEUR' | 'RECRUTEUR';
+type Role = 'TRAVAILLEUR' | 'RECRUTEUR' | 'AGENT';
 const fmt = (d: string) => [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' ');
 
 export default function Register() {
@@ -33,6 +33,7 @@ export default function Register() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [type, setType] = useState<'PARTICULIER' | 'ENTREPRISE'>('PARTICULIER');
   const [raison, setRaison] = useState('');
+  const [perimetre, setPerimetre] = useState('');
   const [fe, setFe] = useState<Record<string, string>>({});
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,9 +43,10 @@ export default function Register() {
     const e: Record<string, string> = {};
     if (nom.trim().length < 2) e.nom = 'Indiquez votre nom.';
     if (digits.length !== 9) e.telephone = 'Entrez les 9 chiffres, par exemple 77 123 45 67.';
+    else if (!digits.startsWith('7')) e.telephone = 'Un mobile sénégalais commence par 7 (70, 75, 76, 77, 78).';
     if (!emailOk(email)) e.email = 'Entrez une adresse e-mail valide.';
     if (password.length < 8) e.password = '8 caractères au moins.';
-    if (role === 'TRAVAILLEUR' && confirmationPassword !== password) e.confirmationPassword = 'Les mots de passe doivent correspondre.';
+    if (role !== 'RECRUTEUR' && confirmationPassword !== password) e.confirmationPassword = 'Les mots de passe doivent correspondre.';
     if (role === 'RECRUTEUR' && type === 'ENTREPRISE' && raison.trim().length < 2) e.raisonSociale = 'Indiquez le nom de l’entreprise.';
     setFe(e);
     if (Object.keys(e).length) return;
@@ -52,10 +54,15 @@ export default function Register() {
     setLoading(true);
     const base = { email: email.trim().toLowerCase(), password, nom: nom.trim(), telephone: `${COUNTRY_PREFIX}${digits}` };
     try {
-      if (role === 'TRAVAILLEUR') {
-        await registerWorker({ ...base, confirmationPassword, langue: 'fr' });
-      } else {
-        await registerRecruiter({ ...base, typeRecruteur: type, raisonSociale: type === 'ENTREPRISE' ? raison.trim() : nom.trim() });
+      const result = role === 'TRAVAILLEUR'
+        ? await registerWorker({ ...base, confirmationPassword, langue: 'fr' })
+        : role === 'AGENT'
+          ? await registerAgent({ ...base, confirmationPassword, perimetre: perimetre.trim() || null, langue: 'fr' })
+          : await registerRecruiter({ ...base, typeRecruteur: type, raisonSociale: type === 'ENTREPRISE' ? raison.trim() : nom.trim() });
+      if (result?.emailConfirmationRequired) {
+        setLoading(false);
+        router.replace({ pathname: '/check-email', params: { email: email.trim().toLowerCase() } });
+        return;
       }
     } catch (err) { setError(err as ApiError); setFe(fieldErrors(err)); setLoading(false); return; }
     try {
@@ -74,12 +81,14 @@ export default function Register() {
       <AuthShell title="Créer un compte" subtitle="Vous êtes…">
         <ChoiceCard icon="hammer-outline" title="Je cherche du travail" subtitle="Travailleur" selected={false} onPress={() => setRole('TRAVAILLEUR')} />
         <ChoiceCard icon="briefcase-outline" title="Je cherche des travailleurs" subtitle="Recruteur" selected={false} onPress={() => setRole('RECRUTEUR')} />
+        <ChoiceCard icon="people-outline" title="J’accompagne des travailleurs" subtitle="Agent" badge="Inscription libre" selected={false} onPress={() => setRole('AGENT')} />
       </AuthShell>
     );
   }
 
+  const titles: Record<Role, string> = { TRAVAILLEUR: 'Compte travailleur', RECRUTEUR: 'Compte recruteur', AGENT: 'Compte agent' };
   return (
-    <AuthShell title={role === 'TRAVAILLEUR' ? 'Compte travailleur' : 'Compte recruteur'}
+    <AuthShell title={titles[role]}
       subtitle="Quelques informations pour commencer."
       footer={<Button label="Changer de profil" variant="ghost" onPress={() => setRole(null)} />}>
       <TextField label="Votre nom" icon="person-outline" autoCapitalize="words" value={nom} onChangeText={setNom} error={fe.nom} />
@@ -90,10 +99,15 @@ export default function Register() {
       <TextField label="Mot de passe" icon="lock-closed-outline" secureTextEntry={!show} autoCapitalize="none" hint="8 caractères au moins"
         value={password} onChangeText={setPassword} error={fe.password}
         right={<Pressable accessibilityRole="button" accessibilityLabel={show ? 'Masquer' : 'Afficher'} onPress={() => setShow(!show)}><Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={22} color={t.muted} /></Pressable>} />
-      {role === 'TRAVAILLEUR' && (
+      {role !== 'RECRUTEUR' && (
         <TextField label="Confirmer le mot de passe" icon="lock-closed-outline" secureTextEntry={!showConfirmation} autoCapitalize="none"
           value={confirmationPassword} onChangeText={setConfirmationPassword} error={fe.confirmationPassword}
           right={<Pressable accessibilityRole="button" accessibilityLabel={showConfirmation ? 'Masquer' : 'Afficher'} onPress={() => setShowConfirmation(!showConfirmation)}><Ionicons name={showConfirmation ? 'eye-off-outline' : 'eye-outline'} size={22} color={t.muted} /></Pressable>} />
+      )}
+
+      {role === 'AGENT' && (
+        <TextField label="Zone d’intervention (facultatif)" icon="map-outline" placeholder="Ex. Médina, Parcelles Assainies"
+          value={perimetre} onChangeText={setPerimetre} error={fe.perimetre} />
       )}
 
       {role === 'RECRUTEUR' && (

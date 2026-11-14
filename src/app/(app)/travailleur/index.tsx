@@ -15,9 +15,10 @@ import { AppText } from '../../../ui/AppText';
 import { Button } from '../../../ui/Button';
 import { Card } from '../../../ui/Card';
 import { HeroCard } from '../../../ui/HeroCard';
-import { MetierFilter } from '../../../ui/MetierFilter';
+import { MetierPicker } from '../../../ui/MetierPicker';
 import { MetierThumb } from '../../../ui/MetierThumb';
 import { MissionCard } from '../../../ui/MissionCard';
+import { StatGrid, StatItem } from '../../../ui/StatGrid';
 
 const open = (router: ReturnType<typeof useRouter>, id: string) => router.push({ pathname: '/mission/[id]', params: { id } });
 
@@ -69,11 +70,16 @@ export default function TravailleurAccueil() {
   const prochaine = cands.find((c) => c.statut === 'CONFIRMEE');
   const cardW = Math.min(width - 56, 420);
   const d = dash.data ?? {};
-  const stats = [
-    typeof d.missionsPending === 'number' && { k: 'a', v: d.missionsPending, l: 'À venir' },
-    typeof d.missionsCompleted === 'number' && { k: 'b', v: d.missionsCompleted, l: 'Terminées' },
-    typeof d.scoreFiabilite === 'number' && { k: 'c', v: `${Math.round(d.scoreFiabilite)} %`, l: 'Fiabilité' },
-  ].filter(Boolean) as { k: string; v: number | string; l: string }[];
+  const ds = d.stats ?? {};
+  const stats: StatItem[] = [
+    { key: 'confirmed', label: 'Missions confirmées', value: ds.applicationsConfirmed, icon: 'checkmark-done-outline' },
+    { key: 'pending', label: 'Candidatures en attente', value: ds.applicationsPending, icon: 'hourglass-outline' },
+    { key: 'completed', label: 'Missions terminées', value: ds.missionsCompleted, icon: 'flag-outline' },
+    { key: 'reliability', label: 'Fiabilité', value: typeof ds.scoreFiabilite === 'number' ? `${Math.round(ds.scoreFiabilite)} %` : null, icon: 'shield-checkmark-outline' },
+    { key: 'net', label: 'Revenus nets', value: typeof ds.netRevenue === 'number' ? fcfa(ds.netRevenue) : null, icon: 'cash-outline' },
+    { key: 'debt', label: 'Commission restante', value: typeof ds.remainingCommission === 'number' && ds.remainingCommission > 0 ? fcfa(ds.remainingCommission) : null, icon: 'wallet-outline', accent: 'amber' },
+  ];
+  const upcoming = Array.isArray(d.upcomingMissions) ? (d.upcomingMissions as { id: string; description: string; dateMission: string; metier: string; zone: string }[]) : [];
   const error = q.error ?? ref.error;
   const refresh = () => { q.refetch(); dash.refetch(); cq.refetch(); };
 
@@ -97,13 +103,24 @@ export default function TravailleurAccueil() {
         </View>
       )}
 
-      {stats.length > 0 && (
-        <View style={[s.pad, s.stats]}>
-          {stats.map((st) => (
-            <View key={st.k} style={[s.stat, { backgroundColor: t.card, borderColor: t.line }]}>
-              <AppText variant="title" color={t.brand}>{st.v}</AppText>
-              <AppText variant="caption" muted>{st.l}</AppText>
-            </View>
+      {stats.length > 0 && <View style={s.pad}><StatGrid items={stats} /></View>}
+
+      <View style={s.pad}>
+        <Button label="Historique de mes missions" variant="secondary" icon="time-outline" onPress={() => router.push('/travailleur/missions' as never)} />
+      </View>
+
+      {upcoming.length > 0 && (
+        <View style={[s.pad, { gap: 10 }]}>
+          <AppText variant="heading">Vos prochaines missions</AppText>
+          {upcoming.map((m) => (
+            <Card key={m.id} style={{ gap: 6 }}>
+              <View style={s.titleRow}>
+                <AppText variant="label" numberOfLines={1}>{m.metier}</AppText>
+                <AppText variant="caption" muted>{fdate(m.dateMission)}</AppText>
+              </View>
+              <AppText variant="caption" muted>{m.zone} · {m.description}</AppText>
+              <Button label="Voir la mission" variant="ghost" icon="chevron-forward" onPress={() => open(router, m.id)} />
+            </Card>
           ))}
         </View>
       )}
@@ -114,7 +131,12 @@ export default function TravailleurAccueil() {
           placeholderTextColor={t.muted} value={recherche} onChangeText={setRecherche} style={[s.input, { color: t.text }]} />
       </View>
 
-      {metiers.length > 1 && <MetierFilter metiers={metiers} value={metier} onChange={setMetier} />}
+      {metiers.length > 1 && (
+        <View style={s.pad}>
+          <MetierPicker options={metiers.map((m) => ({ key: m, label: m }))} value={metier} onChange={setMetier}
+            label="Filtrer par métier" placeholder="Tous les métiers" allowAll allLabel="Tous les métiers" />
+        </View>
+      )}
 
       {(q.isLoading || ref.isLoading) && <View style={{ padding: 40 }}><ActivityIndicator color={t.brand} /></View>}
 
@@ -156,7 +178,7 @@ export default function TravailleurAccueil() {
 }
 
 const s = StyleSheet.create({
-  body: { paddingBottom: 130, gap: 20 },
+  body: { paddingBottom: 130, gap: 20, maxWidth: 1120, width: '100%', alignSelf: 'center' },
   pad: { paddingHorizontal: 20 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },

@@ -1,7 +1,7 @@
 export type Role = 'TRAVAILLEUR' | 'RECRUTEUR' | 'AGENT' | 'ADMINISTRATEUR';
 export type TypeHoraire = 'TRAVAIL_JOURNALIER' | 'DEMI_JOURNEE' | 'CRENEAU_PRECIS';
 
-export interface AuthUser { id: string; email: string; role: Role; statut: string }
+export interface AuthUser { id: string; email: string; role: Role; statut: string; isPremium?: boolean }
 export interface Profil extends AuthUser { nom?: string; telephone?: string; scoreFiabilite?: number | null; typeRecruteur?: string; raisonSociale?: string }
 
 export interface Metier { id: string; code?: string; libelle: string; categorie?: string }

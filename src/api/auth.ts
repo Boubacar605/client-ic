@@ -53,7 +53,7 @@ export async function fetchProfil(user: AuthUser): Promise<Profil> {
   if (!path) return user;
   const raw = unwrap<any>(await api.get(path));
   const p = raw?.profile ?? raw ?? {};
-  return { ...user, nom: p.nom, telephone: p.telephone, scoreFiabilite: raw?.scoreFiabilite, typeRecruteur: raw?.typeRecruteur, raisonSociale: raw?.raisonSociale };
+  return { ...user, nom: p.nom, telephone: p.telephone, scoreFiabilite: raw?.scoreFiabilite, typeRecruteur: raw?.typeRecruteur, raisonSociale: raw?.raisonSociale, isPremium: p.isPremium ?? user.isPremium };
 }
 
 export const fetchDashboard = (role: string) => {

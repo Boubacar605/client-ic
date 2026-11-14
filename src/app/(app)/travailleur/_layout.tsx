@@ -15,6 +15,7 @@ export default function TravailleurLayout() {
       <Tabs.Screen name="disponibilites" options={{ title: 'Dispo', tabBarIcon: tabIcon('calendar', 'calendar-outline') }} />
       <Tabs.Screen name="profil" options={{ title: 'Profil', tabBarIcon: tabIcon('person', 'person-outline') }} />
       <Tabs.Screen name="notifications" options={{ title: 'Alertes', tabBarIcon: tabIcon('notifications', 'notifications-outline') }} />
+      <Tabs.Screen name="missions" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -7,6 +7,9 @@ export const updateWorkerProfile = (body: { langue: string; possedeSonMateriel: 
 export const getWorkerStats = () => api.get('/me/stats').then((r) => unwrap<WorkerStats>(r));
 export const getWorkerEarnings = () => api.get('/me/earnings').then((r) => unwrap<WorkerEarnings>(r));
 export const getWorkerCommissions = () => api.get('/me/commissions').then((r) => unwrap<any>(r));
+export const getWorkerApplications = () => api.get('/me/applications').then((r) => unwrap<any[]>(r));
+export const getWorkerMissions = () => api.get('/me/missions').then((r) => unwrap<any[]>(r));
+export const getPublicWorker = (id: string) => api.get(`/workers/${id}`).then((r) => unwrap<any>(r));
 export const getRecruiterProfile = () => api.get('/recruiters/me').then((r) => unwrap<RecruiterProfile>(r));
 export const updateRecruiterProfile = (body: { raisonSociale?: string }) => api.put('/recruiters/me', body).then((r) => unwrap<RecruiterProfile>(r));
 export const getRecruiterDashboard = () => api.get('/recruiters/dashboard').then((r) => unwrap<Record<string, any>>(r));

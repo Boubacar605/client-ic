@@ -13,4 +13,7 @@ export async function listDisponibilites(): Promise<Disponibilite[]> {
 }
 export const addDisponibilite = (date: string, periode: Periode, profil: Profil) =>
   api.post('/availability', { dateDisponibilite: date, periode }).then(unwrap);
+export const getDisponibilite = (id: string) => api.get(`/availability/${id}`).then((r) => unwrap<any>(r));
+export const updateDisponibilite = (id: string, body: Partial<{ dateDisponibilite: string; periode: Periode; heureDebut: string | null; heureFin: string | null }>) =>
+  api.patch(`/availability/${id}`, body).then((r) => unwrap<any>(r));
 export const removeDisponibilite = (id: string) => api.delete(`/availability/${id}`);

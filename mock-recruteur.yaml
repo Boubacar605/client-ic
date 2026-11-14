@@ -72,8 +72,8 @@ paths:
                 value:
                   email: worker@example.com
                   password: StrongPass123!
-                  nom: Kouassi Jean
-                  telephone: '+2250701020304'
+                  nom: Moussa Diop
+                  telephone: '+221771234567'
                   langue: fr
                   metierIds:
                   - 2d1c2f4d-6f3d-46e3-87ef-4c7df52995f5
@@ -115,7 +115,7 @@ paths:
                   email: recruteur@example.com
                   password: StrongPass123!
                   nom: Awa Diop
-                  telephone: '+2250701020305'
+                  telephone: '+221771234568'
                   langue: fr
                   typeRecruteur: ENTREPRISE
                   raisonSociale: BuildPro SARL
@@ -1772,12 +1772,12 @@ paths:
                     - field: messages
                       value:
                         metadata:
-                          display_phone_number: '+22500000000'
+                          display_phone_number: '+221771234500'
                         contacts:
                         - profile:
                             name: Jean
                         messages:
-                        - from: '+2250701010101'
+                        - from: '+221771234570'
                           text:
                             body: Bonjour
       responses:
@@ -1809,7 +1809,7 @@ paths:
             examples:
               proposal:
                 value:
-                  to: '+2250701010101'
+                  to: '+221771234570'
                   missionId: 3f450a5c-b68b-45a5-9deb-8398d927d598
                   message: Votre candidature a été retenue pour la mission de maçon.
       responses:
@@ -2299,10 +2299,10 @@ components:
           example: StrongPass123!
         nom:
           type: string
-          example: Kouassi Jean
+          example: Moussa Diop
         telephone:
           type: string
-          example: '+2250701020304'
+          example: '+221771234567'
         langue:
           type: string
           example: fr
@@ -2920,7 +2920,7 @@ components:
       properties:
         to:
           type: string
-          example: '+2250701010101'
+          example: '+221771234570'
         missionId:
           type: string
           format: uuid
@@ -2936,7 +2936,7 @@ components:
       properties:
         to:
           type: string
-          example: '+2250701010101'
+          example: '+221771234570'
         missionId:
           type: string
           format: uuid

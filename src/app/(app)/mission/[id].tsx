@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apply, confirmCandidature, rejectCandidature, selectCandidature, withdrawCandidature } from '../../../api/candidatures';
 import { ApiError } from '../../../api/client';
-import { useCandidatures, useMission } from '../../../api/hooks';
-import { cancelMission, closeMission, publishMission } from '../../../api/missions';
+import { useCandidatures, useCandidature, useMission } from '../../../api/hooks';
+import { cancelMission, closeMission, completeMission, deleteMission, publishMission, startMission, updateMission } from '../../../api/missions';
+import { broadcastMission } from '../../../api/notifications';
+import { sendWhatsapp } from '../../../api/whatsapp';
 import { useSession } from '../../../auth/session';
-import { fcfa, fdate, HORAIRE, STATUT_MISSION } from '../../../lib/format';
+import { fcfa, fdate, HORAIRE, STATUT_CANDIDATURE, STATUT_MISSION } from '../../../lib/format';
 import { useAct } from '../../../lib/useAct';
 import { useTheme } from '../../../theme/useTheme';
 import { AppText } from '../../../ui/AppText';
@@ -17,6 +19,7 @@ import { Card } from '../../../ui/Card';
 import { ErrorBox } from '../../../ui/ErrorBox';
 import { MetierThumb } from '../../../ui/MetierThumb';
 import { StatusChip } from '../../../ui/StatusChip';
+import { TextField } from '../../../ui/TextField';
 
 const OUVERTE = ['PUBLIEE', 'PARTIELLEMENT_POURVUE'];
 const CANAL: Record<string, string> = { APPLICATION: 'Application', WHATSAPP: 'WhatsApp', APPEL: 'Appel', SMS: 'SMS' };
@@ -29,13 +32,31 @@ export default function MissionDetail() {
   const insets = useSafeAreaInsets();
   const { profil } = useSession();
   const worker = profil?.role === 'TRAVAILLEUR';
+  const canManage = profil?.role === 'RECRUTEUR';
   const mq = useMission(id);
-  const cq = useCandidatures(id);
+  const cq = useCandidatures(id, worker || canManage);
   const act = useAct();
   const [askCancel, setAskCancel] = useState(false);
   const [askDes, setAskDes] = useState(false);
+  const [askDelete, setAskDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [lieu, setLieu] = useState('');
+  const [description, setDescription] = useState('');
+  const [remuneration, setRemuneration] = useState('');
+  const [postes, setPostes] = useState('');
+  const [date, setDate] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const m = mq.data;
+  useEffect(() => {
+    if (!m) return;
+    setLieu(m.lieu ?? '');
+    setDescription(m.description ?? '');
+    setRemuneration(String(m.remunerationFcfa));
+    setPostes(String(m.nombrePostes));
+    setDate(m.date);
+  }, [m?.id]);
   const cands = cq.data ?? [];
   const mine = worker ? cands.find((c) => c.travailleurId === profil?.id) ?? cands[0] : undefined;
   const confirmed = cands.filter((c) => c.statut === 'CONFIRMEE').length;
@@ -68,6 +89,7 @@ export default function MissionDetail() {
                 </View>
               </View>
             </View>
+            {m.lieu ? <View style={s.row}><Ionicons name="pin-outline" size={20} color={t.muted} /><AppText>Lieu exact : {m.lieu}</AppText></View> : null}
             <View style={s.row}><Ionicons name="calendar-outline" size={20} color={t.muted} /><AppText>{fdate(m.date)}, {HORAIRE[m.typeHoraire]}{m.typeHoraire === 'CRENEAU_PRECIS' && m.heureDebut ? ` (${m.heureDebut} à ${m.heureFin})` : ''}</AppText></View>
             <View style={s.row}><Ionicons name="cash-outline" size={20} color={t.muted} /><AppText variant="label" color={t.brand}>{fcfa(m.remunerationFcfa)} par personne</AppText></View>
             <View style={s.row}><Ionicons name="people-outline" size={20} color={t.muted} /><AppText>{worker ? `${m.nombrePostes} poste${m.nombrePostes > 1 ? 's' : ''}` : `${confirmed} confirmé${confirmed > 1 ? 's' : ''} sur ${m.nombrePostes}`}</AppText></View>
@@ -100,7 +122,7 @@ export default function MissionDetail() {
           )
         )}
 
-        {m && !worker && (
+        {m && canManage && (
           <>
             <View style={s.titleRow}>
               <AppText variant="heading">Candidats ({cands.length})</AppText>
@@ -129,15 +151,80 @@ export default function MissionDetail() {
                     </View>
                   )}
                   {c.statut === 'SELECTIONNEE' && <AppText variant="caption" color={t.amber} style={{ fontWeight: '700' }}>En attente de sa confirmation.</AppText>}
+                  {c.statut === 'SELECTIONNEE' && <Button label="Message WhatsApp de sélection" variant="ghost" icon="logo-whatsapp" loading={act.busy === `wa${c.id}`} onPress={() => act.run(`wa${c.id}`, () => sendWhatsapp({ kind: 'MISSION_SELECTION', missionId: m.id, applicationId: c.id }))} />}
+                  {c.statut === 'CONFIRMEE' && <Button label="Rappel WhatsApp" variant="ghost" icon="logo-whatsapp" loading={act.busy === `wr${c.id}`} onPress={() => act.run(`wr${c.id}`, () => sendWhatsapp({ kind: 'MISSION_REMINDER', missionId: m.id, workerId: c.travailleurId }))} />}
+                  <Button label={detailId === c.id ? 'Masquer le détail' : 'Détail de la candidature'} variant="ghost" icon="information-circle-outline" onPress={() => setDetailId(detailId === c.id ? null : c.id)} />
+                  {detailId === c.id && <CandidatDetails id={c.id} />}
                 </Card>
               );
             })}
 
             {m.statut === 'BROUILLON' && <Button label="Publier la mission" icon="paper-plane" large loading={act.busy === 'pub'} onPress={() => act.run('pub', () => publishMission(m.id))} />}
+            {m.statut === 'POURVUE' && <Button label="Démarrer la mission" icon="play" large loading={act.busy === 'start'} onPress={() => act.run('start', () => startMission(m.id))} />}
+            {m.statut === 'EN_COURS' && <Button label="Terminer la mission" icon="flag" large loading={act.busy === 'done'} onPress={() => act.run('done', () => completeMission(m.id))} />}
             {confirmed > 0 && !['TERMINEE', 'CLOTUREE', 'ANNULEE'].includes(m.statut) && <Button label="Clôturer la mission" icon="flag" variant="secondary" large loading={act.busy === 'close'} onPress={() => act.run('close', () => closeMission(m.id))} />}
             {!['TERMINEE', 'CLOTUREE', 'ANNULEE'].includes(m.statut) && (askCancel
               ? <Button label="Oui, annuler la mission" variant="secondary" loading={act.busy === 'cancel'} onPress={() => act.run('cancel', () => cancelMission(m.id))} />
               : <Button label="Annuler la mission" variant="ghost" onPress={() => setAskCancel(true)} />)}
+
+            <Card>
+              <View style={s.titleRow}>
+                <AppText variant="heading">Modifier la mission</AppText>
+                <Button label={editing ? 'Fermer' : 'Modifier'} variant="ghost" icon="create-outline" onPress={() => setEditing(!editing)} />
+              </View>
+              {editing && (
+                <>
+                  <TextField label="Lieu exact" icon="pin-outline" value={lieu} onChangeText={setLieu} />
+                  <TextField label="Description" icon="document-text-outline" value={description} onChangeText={setDescription} />
+                  <TextField label="Rémunération (FCFA)" icon="cash-outline" keyboardType="number-pad" value={remuneration} onChangeText={(v) => setRemuneration(v.replace(/\D/g, ''))} />
+                  <TextField label="Nombre de postes" icon="people-outline" keyboardType="number-pad" value={postes} onChangeText={(v) => setPostes(v.replace(/\D/g, ''))} />
+                  <TextField label="Date (AAAA-MM-JJ)" icon="calendar-outline" value={date} onChangeText={setDate} />
+                  <Button label="Enregistrer les modifications" icon="checkmark" loading={act.busy === 'edit'} disabled={!date || !remuneration || !postes}
+                    onPress={() => act.run('edit', async () => {
+                      await updateMission(m.id, {
+                        lieu: lieu.trim() || null,
+                        description: description.trim() || undefined,
+                        remunerationFcfa: Number(remuneration),
+                        nombrePostes: Number(postes),
+                        dateMission: date,
+                      });
+                      setEditing(false);
+                    })} />
+                </>
+              )}
+            </Card>
+
+            <Card>
+              <View style={s.row}><Ionicons name="megaphone-outline" size={22} color={t.brand} /><AppText variant="heading">Diffuser la mission</AppText></View>
+              <AppText muted>Sélectionnez jusqu’à 15 candidats de cette mission pour leur envoyer une proposition.</AppText>
+              <View style={s.chips}>
+                {cands.filter((c) => c.travailleurId).map((c) => {
+                  const nom = c.travailleurNom ?? c.travailleurId.slice(0, 6);
+                  const on = selected.includes(c.travailleurId);
+                  return (
+                    <Pressable key={c.id} accessibilityRole="button" accessibilityState={{ selected: on }}
+                      onPress={() => setSelected(on ? selected.filter((id) => id !== c.travailleurId) : selected.length < 15 ? [...selected, c.travailleurId] : selected)}
+                      style={[s.tag, { borderWidth: 1, borderColor: on ? t.brand : t.line, backgroundColor: on ? t.soft : t.card }]}>
+                      <AppText variant="caption" color={on ? t.brand : t.muted}>{nom}</AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Button label={`Diffuser dans l’application (${selected.length})`} icon="notifications-outline" disabled={!selected.length} loading={act.busy === 'bc'}
+                onPress={() => act.run('bc', () => broadcastMission(m.id, selected))} />
+              <Button label={`Envoyer par WhatsApp (${selected.length})`} icon="logo-whatsapp" variant="secondary" disabled={!selected.length} loading={act.busy === 'bwa'}
+                onPress={() => act.run('bwa', () => sendWhatsapp({ kind: 'MISSION_PROPOSAL', missionId: m.id, workerIds: selected }))} />
+              <Button label="Historique WhatsApp" variant="ghost" icon="time-outline" onPress={() => router.push('/whatsapp' as never)} />
+            </Card>
+
+            <Card>
+              <AppText variant="heading">Supprimer la mission</AppText>
+              <AppText muted>La mission sera retirée de la plateforme. Cette action est définitive.</AppText>
+              {askDelete
+                ? <Button label="Oui, supprimer définitivement" variant="secondary" loading={act.busy === 'del'}
+                    onPress={() => act.run('del', async () => { await deleteMission(m.id); router.back(); })} />
+                : <Button label="Supprimer la mission" variant="ghost" onPress={() => setAskDelete(true)} />}
+            </Card>
           </>
         )}
       </ScrollView>
@@ -145,13 +232,38 @@ export default function MissionDetail() {
   );
 }
 
+function CandidatDetails({ id }: { id: string }) {
+  const t = useTheme();
+  const q = useCandidature(id);
+  if (q.isLoading) return <ActivityIndicator color={t.brand} />;
+  if (q.isError) return <ErrorBox message="Impossible de charger l’historique de la candidature." />;
+  const d = q.data;
+  if (!d) return null;
+  const hist: any[] = Array.isArray(d.historique) ? d.historique : [];
+  return (
+    <View style={[s.details, { borderTopColor: t.line }]}>
+      <AppText variant="caption" muted>Reçue le {d.createdAt ? new Date(d.createdAt).toLocaleString('fr-FR') : '—'}{d.dateReponse ? ` · Réponse du ${new Date(d.dateReponse).toLocaleDateString('fr-FR')}` : ''}</AppText>
+      {d.confirmation ? <AppText variant="caption">Confirmation : {d.confirmation.dateConfirmation ?? '—'} · présence {d.confirmation.presence ?? '—'}</AppText> : null}
+      {hist.length
+        ? hist.map((h) => (
+          <View key={h.id} style={s.row}>
+            <Ionicons name="time-outline" size={16} color={t.muted} />
+            <AppText variant="caption" muted style={{ flex: 1 }}>{h.ancienStatut ? `${STATUT_CANDIDATURE[h.ancienStatut] ?? h.ancienStatut} → ` : ''}{STATUT_CANDIDATURE[h.nouveauStatut] ?? h.nouveauStatut} · {new Date(h.createdAt).toLocaleDateString('fr-FR')}</AppText>
+          </View>
+        ))
+        : <AppText variant="caption" muted>Aucun changement de statut enregistré.</AppText>}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 8 },
   back: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  body: { padding: 20, gap: 16 },
+  body: { padding: 20, gap: 16, maxWidth: 960, width: '100%', alignSelf: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   chips: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   tag: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  details: { gap: 6, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
 });

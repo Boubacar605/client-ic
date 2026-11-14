@@ -5,7 +5,7 @@ import { Pressable } from 'react-native';
 import { login } from '../../api/auth';
 import { ApiError, fieldErrors } from '../../api/client';
 import { useSession } from '../../auth/session';
-import { getBaseUrl } from '../../config';
+import { getBaseUrl, ADMIN_ROUTE_SECRET } from '../../config';
 import { emailOk } from '../../lib/validation';
 import { useTheme } from '../../theme/useTheme';
 import { AppText } from '../../ui/AppText';
@@ -43,7 +43,8 @@ export default function Login() {
       footer={
         <>
           <Button label="Créer un compte" variant="secondary" icon="person-add-outline" large onPress={() => router.push('/register')} />
-          <Pressable onPress={() => router.push('/debug')} accessibilityRole="button" style={{ alignItems: 'center', padding: 8 }}>
+          <Pressable onPress={() => router.push('/debug')} onLongPress={() => { if (ADMIN_ROUTE_SECRET) router.push(`/acces/${ADMIN_ROUTE_SECRET}` as never); }}
+            accessibilityRole="button" style={{ alignItems: 'center', padding: 8 }}>
             <AppText variant="caption" muted>Serveur : {getBaseUrl().replace(/^https?:\/\//, '') || 'non défini'}</AppText>
           </Pressable>
         </>

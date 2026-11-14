@@ -32,12 +32,19 @@ export async function getMission(id: string, ref: Reference): Promise<Mission> {
   return toMission(unwrap(await api.get(`/missions/${id}`)), ref);
 }
 
+/** Missions ouvertes publiques : utile aux agents, qui n'ont pas accès à la liste d'un recruteur. */
+export async function listPublicMissions(ref: Reference, limit = 50): Promise<Mission[]> {
+  const rows = asList(unwrap(await api.get('/missions/public', { params: { limit, page: 1 } }))).map((r) => toMission(r, ref));
+  return rows.filter((m) => OUVERTES.includes(m.statut));
+}
+
 const sec = (h: string) => (h.length === 5 ? `${h}:00` : h);
 
 export function buildMissionBody(f: MissionForm, metier?: Metier, zone?: Zone) {
   const creneau = f.typeHoraire === 'CRENEAU_PRECIS';
   return {
     metierId: f.metierId, zoneId: f.zoneId,
+    lieu: f.lieu.trim() || null,
     // La description est obligatoire dans le contrat : on en génère une si le recruteur n'écrit rien.
     description: f.description.trim() || `${metier?.libelle ?? 'Mission'} à ${zone?.nom ?? ''}`.trim(),
     nombrePostes: f.nombrePostes,
@@ -65,3 +72,22 @@ export async function createMission(f: MissionForm, profil: Profil, ref: Referen
 
 export const cancelMission = (id: string) => api.post(`/missions/${id}/cancel`);
 export const closeMission = (id: string) => api.post(`/missions/${id}/close`);
+export const startMission = (id: string) => api.post(`/missions/${id}/start`);
+export const completeMission = (id: string) => api.post(`/missions/${id}/complete`);
+
+export type MissionUpdate = Partial<{
+  description: string;
+  lieu: string | null;
+  nombrePostes: number;
+  remunerationFcfa: number;
+  dateMission: string;
+  typeHoraire: string;
+  heureDebut: string | null;
+  heureFin: string | null;
+  urgente: boolean;
+  modeAttribution: string;
+}>;
+
+export const updateMission = (id: string, body: MissionUpdate) =>
+  api.patch(`/missions/${id}`, body).then((r) => unwrap(r));
+export const deleteMission = (id: string) => api.delete(`/missions/${id}`);
