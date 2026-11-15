@@ -3,9 +3,11 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE         = 'boubacar605/xeuysil-client'
-        DOCKER_TAG           = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'latest'}"
+        DOCKER_IMAGE          = 'boubacar605/xeuysil-client'
+        DOCKER_TAG            = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'latest'}"
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        /* Chemin réel du workspace sur l'hôte (résout le problème des volumes Docker-in-Docker) */
+        HOST_WS               = "${env.JENKINS_HOME_HOST}/workspace/${env.JOB_NAME}"
     }
 
     stages {
@@ -20,7 +22,7 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm --network host \
-                        -v "$(pwd)":/app -w /app \
+                        -v "${HOST_WS}:/app" -w /app \
                         node:22-alpine \
                         sh -c "npm ci"
                 '''
@@ -31,7 +33,7 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm --network host \
-                        -v "$(pwd)":/app -w /app \
+                        -v "${HOST_WS}:/app" -w /app \
                         node:22-alpine \
                         sh -c "node node_modules/expo/bin/cli lint || true"
                 '''
@@ -42,7 +44,7 @@ pipeline {
             steps {
                 sh '''
                     docker run --rm --network host \
-                        -v "$(pwd)":/app -w /app \
+                        -v "${HOST_WS}:/app" -w /app \
                         -e EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1 \
                         -e EXPO_PUBLIC_API_URL_WEB=http://localhost:3000/api/v1 \
                         -e EXPO_PUBLIC_ADMIN_ROUTE=backoffice-acces \
@@ -60,7 +62,7 @@ pipeline {
 
         stage('Analyse de vulnérabilités (Trivy)') {
             steps {
-                sh "docker run --rm aquasec/trivy:latest image --exit-code 0 --severity CRITICAL ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
+                sh "docker run --rm --network host aquasec/trivy:latest image --exit-code 0 --severity CRITICAL ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
             }
         }
 
