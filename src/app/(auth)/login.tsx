@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { login } from '../../api/auth';
 import { ApiError, fieldErrors } from '../../api/client';
+import type { Profil } from '../../api/types';
 import { useSession } from '../../auth/session';
 import { getBaseUrl, ADMIN_ROUTE_SECRET } from '../../config';
 import { emailOk } from '../../lib/validation';
@@ -14,14 +15,42 @@ import { Button } from '../../ui/Button';
 import { ErrorBox } from '../../ui/ErrorBox';
 import { TextField } from '../../ui/TextField';
 
+const DEMO_COMPTES: { role: Profil['role']; label: string; icon: string; profil: Profil }[] = [
+  {
+    role: 'TRAVAILLEUR',
+    label: 'Travailleur',
+    icon: 'construct-outline',
+    profil: { id: 'demo-t', email: 'demo.travailleur@xeuysil.sn', role: 'TRAVAILLEUR', statut: 'ACTIF', nom: 'Amadou Demo', telephone: '+221771234567' },
+  },
+  {
+    role: 'RECRUTEUR',
+    label: 'Recruteur',
+    icon: 'business-outline',
+    profil: { id: 'demo-r', email: 'demo.recruteur@xeuysil.sn', role: 'RECRUTEUR', statut: 'ACTIF', nom: 'Fatou Demo', telephone: '+221772345678', raisonSociale: 'Demo SARL', typeRecruteur: 'PARTICULIER' },
+  },
+  {
+    role: 'AGENT',
+    label: 'Agent',
+    icon: 'people-outline',
+    profil: { id: 'demo-a', email: 'demo.agent@xeuysil.sn', role: 'AGENT', statut: 'ACTIF', nom: 'Moussa Demo', telephone: '+221773456789' },
+  },
+  {
+    role: 'ADMINISTRATEUR',
+    label: 'Admin',
+    icon: 'shield-outline',
+    profil: { id: 'demo-ad', email: 'demo.admin@xeuysil.sn', role: 'ADMINISTRATEUR', statut: 'ACTIF', nom: 'Admin Demo', telephone: '+221774567890' },
+  },
+];
+
 export default function Login() {
   const t = useTheme();
   const router = useRouter();
-  const { signIn } = useSession();
+  const { signIn, signInDemo } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [fe, setFe] = useState<Record<string, string>>({});
 
@@ -36,6 +65,12 @@ export default function Login() {
     try { await signIn(await login(email, password)); }
     catch (err) { setError(err as ApiError); setFe(fieldErrors(err)); }
     finally { setLoading(false); }
+  }
+
+  async function connecterDemo(item: typeof DEMO_COMPTES[0]) {
+    setDemoLoading(item.role);
+    try { await signInDemo(item.profil); }
+    finally { setDemoLoading(null); }
   }
 
   return (
@@ -58,6 +93,37 @@ export default function Login() {
       </Pressable>
       {error && <ErrorBox message={error.title} code={error.code} />}
       <Button label="Se connecter" icon="arrow-forward" large loading={loading} onPress={submit} />
+
+      {/* Accès démo */}
+      <View style={[s.separator, { borderColor: t.line }]}>
+        <View style={[s.line, { backgroundColor: t.line }]} />
+        <AppText variant="caption" muted style={s.sepLabel}>Accès démo</AppText>
+        <View style={[s.line, { backgroundColor: t.line }]} />
+      </View>
+      <View style={s.demoGrid}>
+        {DEMO_COMPTES.map((item) => (
+          <Pressable
+            key={item.role}
+            style={[s.demoBtn, { backgroundColor: t.soft, borderColor: t.brand + '40' }]}
+            onPress={() => connecterDemo(item)}
+            accessibilityRole="button"
+            disabled={demoLoading !== null}
+          >
+            <Ionicons name={item.icon as any} size={20} color={t.brand} />
+            <AppText variant="caption" color={t.brand} style={{ fontWeight: '600' }}>
+              {demoLoading === item.role ? '...' : item.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
     </AuthShell>
   );
 }
+
+const s = StyleSheet.create({
+  separator: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 4 },
+  line: { flex: 1, height: 1 },
+  sepLabel: { paddingHorizontal: 4 },
+  demoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  demoBtn: { flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1 },
+});

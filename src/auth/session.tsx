@@ -10,6 +10,7 @@ interface Session {
   status: Status;
   profil: Profil | null;
   signIn: (r: LoginResult) => Promise<void>;
+  signInDemo: (profil: Profil) => Promise<void>;
   signOut: () => Promise<void>;
 }
 const Ctx = createContext<Session | null>(null);
@@ -49,13 +50,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     fetchProfil(base).then(setProfil).catch(() => {}); // nom et téléphone arrivent juste après
   }, []);
 
+  const signInDemo = useCallback(async (profil: Profil) => {
+    await tokens.clear(); // pas de vrais jetons en mode démo
+    setProfil(profil);
+    setStatus('signedIn');
+  }, []);
+
   const signOut = useCallback(async () => {
     try { await logoutApi(); } catch { /* hors ligne : on déconnecte quand même */ }
     await tokens.clear();
     setProfil(null); setStatus('signedOut');
   }, []);
 
-  const value = useMemo(() => ({ status, profil, signIn, signOut }), [status, profil, signIn, signOut]);
+  const value = useMemo(() => ({ status, profil, signIn, signInDemo, signOut }), [status, profil, signIn, signInDemo, signOut]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
