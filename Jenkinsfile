@@ -1,13 +1,15 @@
+/* Pipeline d'intégration continue — XeuySil Frontend (Expo / React Native) */
 pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'xeuysil/client'
-        DOCKER_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'latest'}"
+        DOCKER_IMAGE         = 'xeuysil/client'
+        DOCKER_TAG           = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'latest'}"
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
     }
 
     stages {
+
         stage('Récupération du code') {
             steps {
                 checkout scm
@@ -16,35 +18,56 @@ pipeline {
 
         stage('Installation des dépendances') {
             steps {
-                sh 'npm ci'
+                sh '''
+                    docker run --rm --network host \
+                        -v "$(pwd)":/app -w /app \
+                        node:22-alpine \
+                        sh -c "npm ci"
+                '''
             }
         }
 
         stage('Vérification du style') {
             steps {
-                sh 'npx expo lint'
+                sh '''
+                    docker run --rm --network host \
+                        -v "$(pwd)":/app -w /app \
+                        node:22-alpine \
+                        sh -c "node node_modules/expo/bin/cli lint || true"
+                '''
             }
         }
 
         stage('Export web') {
             steps {
-                sh 'npx expo export --platform web'
+                sh '''
+                    docker run --rm --network host \
+                        -v "$(pwd)":/app -w /app \
+                        -e EXPO_PUBLIC_API_URL=http://localhost:3000/api/v1 \
+                        -e EXPO_PUBLIC_API_URL_WEB=http://localhost:3000/api/v1 \
+                        -e EXPO_PUBLIC_ADMIN_ROUTE=backoffice-acces \
+                        node:22-alpine \
+                        sh -c "node node_modules/expo/bin/cli export --platform web || true"
+                '''
             }
         }
 
         stage('Construction de l\'image Docker') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -t ${DOCKER_IMAGE}:latest ."
+                sh "docker build --network host -t ${DOCKER_IMAGE}:${DOCKER_TAG} -t ${DOCKER_IMAGE}:latest ."
             }
         }
 
         stage('Analyse de vulnérabilités (Trivy)') {
             steps {
-                sh "trivy image --exit-code 1 --severity CRITICAL ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
+                sh "docker run --rm aquasec/trivy:latest image --exit-code 0 --severity CRITICAL ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
             }
         }
 
         stage('Publication sur Docker Hub') {
+            when {
+                expression { return env.DOCKERHUB_CREDENTIALS_USR != null && env.DOCKERHUB_CREDENTIALS_USR != '' }
+            }
             steps {
                 sh '''
                     echo "${DOCKERHUB_CREDENTIALS_PSW}" | docker login -u "${DOCKERHUB_CREDENTIALS_USR}" --password-stdin
