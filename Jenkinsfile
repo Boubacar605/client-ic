@@ -3,7 +3,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE         = 'xeuysil/client'
+        DOCKER_IMAGE         = 'boubacar605/xeuysil-client'
         DOCKER_TAG           = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'latest'}"
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
     }
@@ -80,9 +80,6 @@ pipeline {
     }
 
     post {
-        always {
-            cleanWs()
-        }
         success {
             echo 'Pipeline client terminé avec succès.'
         }
