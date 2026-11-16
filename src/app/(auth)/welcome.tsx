@@ -15,15 +15,15 @@ import { Logo } from '../../ui/Logo';
 type Slide = { photo: string; icon: MetierIcon; couleur: string; titre: string; texte: string };
 
 const SLIDES: Slide[] = [
-  { photo: ‘accueil-1’, icon: ‘hammer-wrench’, couleur: ‘#1a4a24’,
-    titre: ‘Travaillez. Trouvez. Avancez.’,
-    texte: ‘Maçons, jardiniers, lessiveuses… recevez les missions de votre quartier et répondez en un geste.’ },
-  { photo: ‘accueil-2’, icon: ‘account-group’, couleur: ‘#0d3318’,
-    titre: ‘Besoin de bras demain ?’,
-    texte: ‘Publiez votre besoin en deux minutes. Nous prévenons les bons travailleurs, vous choisissez.’ },
-  { photo: ‘accueil-3’, icon: ‘whatsapp’, couleur: ‘#163b1e’,
-    titre: ‘Pour tout le monde’,
-    texte: ‘Application, WhatsApp ou appel d\’un agent : répondez comme vous pouvez, depuis Dakar ou Thiès.’ },
+  { photo: 'accueil-1', icon: 'hammer-wrench', couleur: '#1a4a24',
+    titre: 'Travaillez. Trouvez. Avancez.',
+    texte: 'Maçons, jardiniers, lessiveuses… recevez les missions de votre quartier et répondez en un geste.' },
+  { photo: 'accueil-2', icon: 'account-group', couleur: '#0d3318',
+    titre: 'Besoin de bras demain ?',
+    texte: 'Publiez votre besoin en deux minutes. Nous prévenons les bons travailleurs, vous choisissez.' },
+  { photo: 'accueil-3', icon: 'whatsapp', couleur: '#163b1e',
+    titre: 'Pour tout le monde',
+    texte: 'Application, WhatsApp ou appel d\'un agent : répondez comme vous pouvez, depuis Dakar ou Thiès.' },
 ];
 const DELAY = 4500;
 
