@@ -1,16 +1,40 @@
-// Style inspiré de DakarGo : fonds clairs et aérés, grandes formes arrondies, vert profond.
+// Palette officielle XeuySil — vert profond sénégalais + or.
 export const light = {
-  bg: '#f3f6f2', card: '#ffffff', text: '#15221d', muted: '#62716a', line: '#e1e8e3',
-  brand: '#0f6b5c', onBrand: '#ffffff', soft: '#dff0e8', sun: '#f2b705', sunSoft: '#fff3cc',
-  error: '#b3261e', errorSoft: '#fbe9e7', blue: '#1565c0', amber: '#a35f00', green: '#1b7a3a',
+  bg: '#f0f7f1',
+  card: '#ffffff',
+  text: '#0d1f10',
+  muted: '#5a7260',
+  line: '#d4e8d8',
+  brand: '#1a6b2a',
+  onBrand: '#ffffff',
+  soft: '#d4f0da',
+  sun: '#f2b705',
+  sunSoft: '#fff4cc',
+  error: '#c62828',
+  errorSoft: '#fce4e4',
+  blue: '#1565c0',
+  amber: '#b45309',
+  green: '#2e7d32',
   tabBar: '#ffffff',
 };
 export type Theme = typeof light;
 export const dark: Theme = {
-  bg: '#0d1512', card: '#17221e', text: '#e8f0ed', muted: '#9bb0a8', line: '#2a3a34',
-  brand: '#3fb59f', onBrand: '#07130f', soft: '#1c3a33', sun: '#f2b705', sunSoft: '#3a3110',
-  error: '#f2b8b5', errorSoft: '#3b1e1c', blue: '#7fb8f5', amber: '#ffc666', green: '#7fd69a',
-  tabBar: '#1b2823',
+  bg: '#061209',
+  card: '#112116',
+  text: '#e4f0e7',
+  muted: '#7ea886',
+  line: '#1e3d26',
+  brand: '#4caf50',
+  onBrand: '#061209',
+  soft: '#1a3d20',
+  sun: '#f2b705',
+  sunSoft: '#3a300a',
+  error: '#ef9a9a',
+  errorSoft: '#3b1212',
+  blue: '#90caf9',
+  amber: '#ffd54f',
+  green: '#81c784',
+  tabBar: '#112116',
 };
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
-export const radius = { md: 14, lg: 20, xl: 26, pill: 999 };
+export const radius = { md: 14, lg: 20, xl: 28, pill: 999 };

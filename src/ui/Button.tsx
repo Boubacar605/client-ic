@@ -18,13 +18,18 @@ export function Button({ label, onPress, variant = 'primary', large, loading, di
   const t = useTheme();
   const bg = variant === 'primary' ? t.brand : variant === 'secondary' ? t.soft : 'transparent';
   const fg = variant === 'primary' ? t.onBrand : variant === 'secondary' ? t.brand : t.muted;
+  const hasShadow = variant === 'primary';
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       disabled={disabled || loading}
       onPress={onPress}
-      style={({ pressed }) => [s.btn, { backgroundColor: bg, opacity: disabled ? 0.5 : pressed ? 0.85 : 1, minHeight: large ? 58 : 50 }]}
+      style={({ pressed }) => [
+        s.btn,
+        hasShadow && s.shadow,
+        { backgroundColor: bg, opacity: disabled ? 0.5 : pressed ? 0.85 : 1, minHeight: large ? 58 : 50 },
+      ]}
     >
       {loading ? (
         <ActivityIndicator color={fg} />
@@ -40,5 +45,12 @@ export function Button({ label, onPress, variant = 'primary', large, loading, di
 
 const s = StyleSheet.create({
   btn: { borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 20 },
-  label: { fontWeight: '700' },
+  label: { fontWeight: '700', letterSpacing: 0.3 },
+  shadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
 });

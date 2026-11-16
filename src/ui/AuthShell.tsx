@@ -23,7 +23,13 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
       <ScrollView contentContainerStyle={[s.scroll, { paddingTop: insets.top + 64, paddingBottom: insets.bottom + 24 }]}
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={s.col}>
-          <View style={s.brand}><Logo size={60} /><AppText variant="title">XeuySil</AppText></View>
+          <View style={[s.brandArea, { backgroundColor: t.brand }]}>
+            <Logo size={72} />
+            <AppText variant="title" color="#ffffff" style={{ marginTop: 8, letterSpacing: 1 }}>XeuySil</AppText>
+            <AppText variant="caption" color="rgba(255,255,255,0.8)" style={{ letterSpacing: 2, textTransform: 'uppercase' }}>
+              Travaillez · Trouvez · Avancez
+            </AppText>
+          </View>
           <Card>
             <AppText variant="title">{title}</AppText>
             {subtitle ? <AppText muted>{subtitle}</AppText> : null}
@@ -38,6 +44,13 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
 const s = StyleSheet.create({
   scroll: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 20 },
   col: { width: '100%', maxWidth: 440, gap: 16 },
-  brand: { alignItems: 'center', gap: 6 },
+  brandArea: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    gap: 4,
+    marginBottom: 4,
+  },
   back: { position: 'absolute', left: 16, zIndex: 10, width: 46, height: 46, borderRadius: 23, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 });

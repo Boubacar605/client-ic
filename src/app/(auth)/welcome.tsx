@@ -15,12 +15,15 @@ import { Logo } from '../../ui/Logo';
 type Slide = { photo: string; icon: MetierIcon; couleur: string; titre: string; texte: string };
 
 const SLIDES: Slide[] = [
-  { photo: 'accueil-1', icon: 'hammer-wrench', couleur: '#8a4b1f', titre: 'Du travail près de chez vous',
-    texte: 'Maçons, menuisiers, jardiniers, lessiveuses… recevez les missions de votre quartier et répondez en un geste.' },
-  { photo: 'accueil-2', icon: 'account-group', couleur: '#0f4d40', titre: 'Besoin de bras demain ?',
-    texte: 'Publiez votre besoin en deux minutes. Nous prévenons les bons travailleurs, vous choisissez.' },
-  { photo: 'accueil-3', icon: 'whatsapp', couleur: '#1f5a8a', titre: 'Pour tout le monde',
-    texte: 'Application, WhatsApp ou appel d’un agent : chacun répond comme il peut.' },
+  { photo: ‘accueil-1’, icon: ‘hammer-wrench’, couleur: ‘#1a4a24’,
+    titre: ‘Travaillez. Trouvez. Avancez.’,
+    texte: ‘Maçons, jardiniers, lessiveuses… recevez les missions de votre quartier et répondez en un geste.’ },
+  { photo: ‘accueil-2’, icon: ‘account-group’, couleur: ‘#0d3318’,
+    titre: ‘Besoin de bras demain ?’,
+    texte: ‘Publiez votre besoin en deux minutes. Nous prévenons les bons travailleurs, vous choisissez.’ },
+  { photo: ‘accueil-3’, icon: ‘whatsapp’, couleur: ‘#163b1e’,
+    titre: ‘Pour tout le monde’,
+    texte: ‘Application, WhatsApp ou appel d\’un agent : répondez comme vous pouvez, depuis Dakar ou Thiès.’ },
 ];
 const DELAY = 4500;
 
@@ -96,7 +99,7 @@ export default function Welcome() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0d1512' },
+  root: { flex: 1, backgroundColor: '#061209' },
   bgIcon: { position: 'absolute', alignSelf: 'center', top: '14%' },
   text: { position: 'absolute', left: 24, right: 24, gap: 10 },
   header: { position: 'absolute', left: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
