@@ -14,6 +14,8 @@ export default function RecruteurLayout() {
       <Tabs.Screen name="publier" options={{ title: 'Publier', tabBarIcon: tabIcon('add-circle', 'add-circle-outline') }} />
       <Tabs.Screen name="profil" options={{ title: 'Profil', tabBarIcon: tabIcon('person', 'person-outline') }} />
       <Tabs.Screen name="notifications" options={{ title: 'Alertes', tabBarIcon: tabIcon('notifications', 'notifications-outline') }} />
+      <Tabs.Screen name="candidatures" options={{ href: null }} />
+      <Tabs.Screen name="missions" options={{ href: null }} />
     </Tabs>
   );
 }
