@@ -51,12 +51,17 @@ export default function Login() {
       }>
       <TextField label="Adresse e-mail" icon="mail-outline" keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
         placeholder="nom@exemple.com" value={email} onChangeText={setEmail} error={fe.email} />
-      <TextField label="Mot de passe" icon="lock-closed-outline" secureTextEntry={!show} autoCapitalize="none" value={password} onChangeText={setPassword}
+      <TextField label="Mot de passe" icon="lock-closed-outline" secureTextEntry={!show} autoCapitalize="none" placeholder="Votre mot de passe"
+        value={password} onChangeText={setPassword}
         error={fe.password} right={<Pressable accessibilityRole="button" accessibilityLabel={show ? 'Masquer' : 'Afficher'} onPress={() => setShow(!show)}><Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={22} color={t.muted} /></Pressable>} />
       <Pressable onPress={() => router.push('/forgot-password')} accessibilityRole="link" style={{ alignSelf: 'flex-end', paddingVertical: 4 }}>
         <AppText color={t.brand}>Mot de passe oublié ?</AppText>
       </Pressable>
-      {error && <ErrorBox message={error.title} code={error.code} />}
+      {error && <ErrorBox message={error.title} />}
+      {error?.code === 'EMAIL_NOT_CONFIRMED' ? (
+        <Button label="Renvoyer l’e-mail de confirmation" icon="mail-outline" variant="secondary"
+          onPress={() => router.push({ pathname: '/check-email', params: { email: email.trim().toLowerCase() } })} />
+      ) : null}
       <Button label="Se connecter" icon="arrow-forward" large loading={loading} onPress={submit} />
     </AuthShell>
   );

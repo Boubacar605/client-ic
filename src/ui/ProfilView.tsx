@@ -43,7 +43,7 @@ export function ProfilView() {
   const [editMetiers, setEditMetiers] = useState(false);
   const [editZones, setEditZones] = useState(false);
   useEffect(() => { if (rp.data) setRaisonSociale(rp.data.raisonSociale); }, [rp.data]);
-  useEffect(() => { if (wp.data) { setLangue(wp.data.langue); setMateriel(wp.data.possedeSonMateriel); setMetierIds(wp.data.metiers.map((m) => m.id)); setZoneIds(wp.data.zones.map((z) => z.id)); } }, [wp.data?.id]);
+  useEffect(() => { if (wp.data) { setLangue(wp.data.langue); setMateriel(wp.data.possedeSonMateriel); setMetierIds((wp.data.metiers ?? []).map((m) => m.id)); setZoneIds((wp.data.zones ?? []).map((z) => z.id)); } }, [wp.data?.id]);
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const zoneById = ref.data?.zoneById;
   const metierById = ref.data?.metierById;
@@ -70,6 +70,12 @@ export function ProfilView() {
         {profil?.telephone ? <View style={s.row}><Ionicons name="call-outline" size={20} color={t.muted} /><AppText muted>{profil.telephone}</AppText></View> : null}
         {typeof profil?.scoreFiabilite === 'number' ? <View style={s.row}><Ionicons name="shield-checkmark-outline" size={20} color={t.muted} /><AppText muted>Fiabilité {Math.round(profil.scoreFiabilite)} %</AppText></View> : null}
       </Card>
+      {worker && wp.data?.agent ? <Card>
+        <View style={s.row}><Ionicons name="people-outline" size={22} color={t.brand} /><AppText variant="heading">Mon agent référent</AppText></View>
+        <AppText variant="label">{wp.data.agent.nom}</AppText>
+        {wp.data.agent.codeParrainage ? <AppText muted>Code agent : {wp.data.agent.codeParrainage}</AppText> : null}
+        <AppText muted variant="caption">Il vous accompagne et peut vous proposer des missions.</AppText>
+      </Card> : null}
       {worker && (ws.data || we.data) ? <Card>
         <AppText variant="heading">Mon activité</AppText>
         <View style={s.stats}>
@@ -81,7 +87,7 @@ export function ProfilView() {
       </Card> : null}
       {worker && wp.data ? <Card>
         <AppText variant="heading">Préférences travailleur</AppText>
-        <TextField label="Langue" value={langue} onChangeText={setLangue} />
+        <TextField label="Langue" placeholder="Ex. Français" value={langue} onChangeText={setLangue} />
         <Button label={materiel ? 'Matériel disponible' : 'Pas de matériel'} variant="secondary" icon={materiel ? 'checkmark-circle-outline' : 'close-circle-outline'} onPress={() => setMateriel((v) => !v)} />
 
         <View style={{ gap: 8 }}>
@@ -127,7 +133,7 @@ export function ProfilView() {
       </Card> : null}
       {recruiter && rp.data ? <Card>
         <AppText variant="heading">Profil recruteur</AppText>
-        <TextField label="Raison sociale" value={raisonSociale} onChangeText={setRaisonSociale} />
+        <TextField label="Raison sociale" placeholder="Ex. BTP Sénégal SARL" value={raisonSociale} onChangeText={setRaisonSociale} />
         {updateRecruiter.error ? <ErrorBox message="Impossible d’enregistrer la raison sociale." /> : null}
         <Button label="Enregistrer" loading={updateRecruiter.isPending} onPress={() => updateRecruiter.mutate({ raisonSociale })} />
       </Card> : null}

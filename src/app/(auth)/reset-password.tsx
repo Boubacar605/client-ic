@@ -54,11 +54,14 @@ export default function ResetPassword() {
       {linkToken ? (
         <AppText muted>Lien de récupération reconnu. Il ne vous reste qu'à choisir un nouveau mot de passe.</AppText>
       ) : (
-        <TextField label="Jeton de récupération" icon="key-outline" value={token} onChangeText={setToken} autoCapitalize="none" />
+        <TextField label="Jeton de récupération" icon="key-outline" value={token} onChangeText={setToken} autoCapitalize="none"
+          placeholder="Collez ici le jeton reçu par e-mail" />
       )}
-      <TextField label="Nouveau mot de passe" icon="lock-closed-outline" secureTextEntry value={password} onChangeText={setPassword} hint="8 caractères au moins" />
-      <TextField label="Confirmer le mot de passe" icon="lock-closed-outline" secureTextEntry value={confirmation} onChangeText={setConfirmation} />
-      {error ? <ErrorBox message={error.title} code={error.code} /> : null}
+      <TextField label="Nouveau mot de passe" icon="lock-closed-outline" secureTextEntry value={password} onChangeText={setPassword}
+        placeholder="8 caractères minimum" hint="8 caractères au moins" />
+      <TextField label="Confirmer le mot de passe" icon="lock-closed-outline" secureTextEntry value={confirmation} onChangeText={setConfirmation}
+        placeholder="Répétez le nouveau mot de passe" />
+      {error ? <ErrorBox message={error.title} /> : null}
       <Button label="Réinitialiser" icon="checkmark" loading={loading} onPress={submit} />
       {!linkToken ? <AppText muted>Le jeton est fourni par le lien reçu par e-mail.</AppText> : null}
     </AuthShell>

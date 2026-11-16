@@ -6,7 +6,6 @@ import { addDisponibilite, getDisponibilite, removeDisponibilite, updateDisponib
 import type { Periode } from '../../../api/disponibilites';
 import { ApiError } from '../../../api/client';
 import { useDisponibilites } from '../../../api/hooks';
-import { useSession } from '../../../auth/session';
 import { fdate } from '../../../lib/format';
 import { useAct } from '../../../lib/useAct';
 import { isoLocal } from '../../../lib/validation';
@@ -23,27 +22,35 @@ const OPTIONS: { v: Choix; label: string; icon: React.ComponentProps<typeof Ioni
   { v: 'JOURNEE', label: 'Journée', icon: 'sunny' },
   { v: 'MATIN', label: 'Matin', icon: 'partly-sunny' },
   { v: 'APRES_MIDI', label: 'Après-midi', icon: 'moon' },
+  { v: 'CRENEAU', label: 'Créneau', icon: 'time' },
   { v: 'AUCUNE', label: 'Pas libre', icon: 'close-circle' },
 ];
+const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 // Les 7 prochains jours : on touche une pastille par jour. Être disponible n'engage personne.
 export default function Disponibilites() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { profil } = useSession();
   const q = useDisponibilites();
   const act = useAct();
   const list = q.data ?? [];
   const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return isoLocal(d); });
-  const [detail, setDetail] = useState<{ id: string; date: string; heureDebut: string; heureFin: string } | null>(null);
+  const [detail, setDetail] = useState<{ id: string; date: string; periode: Periode; heureDebut: string; heureFin: string } | null>(null);
   const [detailBusy, setDetailBusy] = useState<string | null>(null);
 
   async function choisir(date: string, v: Choix) {
     const existantes = list.filter((x) => x.date === date);
-    if (v !== 'AUCUNE' && existantes.some((x) => x.periode === v)) {
-      await ouvrirDetail(date, existantes.find((x) => x.periode === v)!.id);
-      return; // déjà choisi : on ouvre le détail (horaires)
+    if (v === 'CRENEAU') {
+      const creneau = existantes.find((x) => x.periode === 'CRENEAU');
+      if (creneau) { await ouvrirDetail(date, creneau.id); return; }
+      await act.run(date, async () => {
+        for (const e of existantes) await removeDisponibilite(e.id);
+        const created = await addDisponibilite(date, 'CRENEAU', { heureDebut: '08:00', heureFin: '12:00' });
+        setDetail({ id: created.id, date, periode: 'CRENEAU', heureDebut: '08:00', heureFin: '12:00' });
+      });
+      return;
     }
+    if (v !== 'AUCUNE' && existantes.some((x) => x.periode === v)) return; // déjà choisi
     await act.run(date, async () => {
       if (v === 'AUCUNE') { for (const e of existantes) await removeDisponibilite(e.id); return; }
       const [premiere, ...reste] = existantes;
@@ -51,7 +58,7 @@ export default function Disponibilites() {
         await updateDisponibilite(premiere.id, { dateDisponibilite: date, periode: v });
         for (const e of reste) await removeDisponibilite(e.id);
       } else {
-        await addDisponibilite(date, v, profil!);
+        await addDisponibilite(date, v);
       }
     });
   }
@@ -61,16 +68,20 @@ export default function Disponibilites() {
     setDetailBusy(date);
     try {
       const d = await getDisponibilite(id);
-      setDetail({ id, date, heureDebut: d.heureDebut ?? '', heureFin: d.heureFin ?? '' });
+      if (d.periode !== 'CRENEAU') return;
+      setDetail({ id, date, periode: 'CRENEAU', heureDebut: d.heureDebut ?? '', heureFin: d.heureFin ?? '' });
     } catch { /* le détail n'est pas indispensable */ }
     finally { setDetailBusy(null); }
   }
 
+  const horairesValides = !!detail && HEURE.test(detail.heureDebut.trim()) && HEURE.test(detail.heureFin.trim())
+    && detail.heureFin > detail.heureDebut;
+
   async function enregistrerHoraires() {
-    if (!detail) return;
+    if (!detail || !horairesValides) return;
     await act.run(detail.date, () => updateDisponibilite(detail.id, {
-      heureDebut: detail.heureDebut.trim() || null,
-      heureFin: detail.heureFin.trim() || null,
+      heureDebut: detail.heureDebut.trim(),
+      heureFin: detail.heureFin.trim(),
     }));
     setDetail(null);
   }
@@ -83,7 +94,7 @@ export default function Disponibilites() {
         <AppText muted>Dites quand vous êtes libre : vous recevrez les bonnes missions.</AppText>
       </View>
       <View style={[s.note, { backgroundColor: t.sunSoft }]}><AppText variant="caption">Être disponible n’engage personne : seule votre confirmation compte.</AppText></View>
-      {act.error && <ErrorBox message={act.error.title} code={act.error.code} />}
+      {act.error && <ErrorBox message={act.error.title} />}
       {q.isLoading && <ActivityIndicator color={t.brand} style={{ marginTop: 30 }} />}
       {q.isError && <><ErrorBox message={q.error instanceof ApiError ? q.error.title : 'Impossible de charger vos disponibilités.'} /><Button label="Réessayer" icon="refresh" onPress={() => q.refetch()} /></>}
       {!q.isLoading && !q.isError && days.map((date, i) => {
@@ -111,12 +122,13 @@ export default function Disponibilites() {
             {detailBusy === date && <ActivityIndicator color={t.brand} />}
             {detail?.date === date && (
               <View style={[s.horaires, { borderTopColor: t.line }]}>
-                <AppText variant="label">Préciser les horaires (facultatif)</AppText>
+                <AppText variant="label">Horaires du créneau</AppText>
                 <View style={s.opts}>
                   <View style={{ flex: 1 }}><TextField label="Début" value={detail.heureDebut} onChangeText={(v) => setDetail((d) => (d ? { ...d, heureDebut: v } : d))} placeholder="08:00" /></View>
                   <View style={{ flex: 1 }}><TextField label="Fin" value={detail.heureFin} onChangeText={(v) => setDetail((d) => (d ? { ...d, heureFin: v } : d))} placeholder="16:00" /></View>
                 </View>
-                <Button label="Enregistrer les horaires" icon="time-outline" loading={act.busy === date} onPress={enregistrerHoraires} />
+                {!horairesValides && <AppText variant="caption" color={t.amber}>Format HH:MM attendu, la fin doit être après le début.</AppText>}
+                <Button label="Enregistrer les horaires" icon="time-outline" loading={act.busy === date} disabled={!horairesValides} onPress={enregistrerHoraires} />
               </View>
             )}
           </Card>

@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createAdminUser } from '../../../api/admin';
 import { ApiError } from '../../../api/client';
+import { ROLE_LABEL } from '../../../lib/format';
 import { useTheme } from '../../../theme/useTheme';
 import { AppText } from '../../../ui/AppText';
 import { Button } from '../../../ui/Button';
@@ -75,19 +76,19 @@ export default function NouveauCompte() {
             </Pressable>
           ))}
         </View>
-        <TextField label="Nom complet" icon="person-outline" autoCapitalize="words" value={nom} onChangeText={setNom} />
+        <TextField label="Nom complet" icon="person-outline" autoCapitalize="words" placeholder="Ex. Awa Ndiaye" value={nom} onChangeText={setNom} />
         <TextField label="Téléphone" icon="call-outline" keyboardType="phone-pad" placeholder="+221 77 123 45 67" hint="Mobile sénégalais : +221 puis 9 chiffres commençant par 7" value={telephone} onChangeText={setTelephone} />
-        <TextField label="E-mail" icon="mail-outline" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-        <TextField label="Mot de passe" icon="lock-closed-outline" secureTextEntry autoCapitalize="none" hint="8 caractères au moins" value={password} onChangeText={setPassword} />
-        {role === 'AGENT' && <TextField label="Périmètre (facultatif)" icon="map-outline" value={perimetre} onChangeText={setPerimetre} />}
-        {error ? <ErrorBox message={error.title} code={error.code} /> : null}
+        <TextField label="E-mail" icon="mail-outline" keyboardType="email-address" autoCapitalize="none" placeholder="nom@exemple.com" value={email} onChangeText={setEmail} />
+        <TextField label="Mot de passe" icon="lock-closed-outline" secureTextEntry autoCapitalize="none" placeholder="8 caractères minimum" hint="8 caractères au moins" value={password} onChangeText={setPassword} />
+        {role === 'AGENT' && <TextField label="Périmètre (facultatif)" icon="map-outline" placeholder="Ex. Dakar — Médina" value={perimetre} onChangeText={setPerimetre} />}
+        {error ? <ErrorBox message={error.title} /> : null}
         <Button label="Créer le compte" icon="checkmark" loading={loading} onPress={submit} />
       </Card>
 
       {created && (
         <Card>
           <View style={s.row}><Ionicons name="checkmark-circle" size={22} color={t.brand} /><AppText variant="heading">Compte créé</AppText></View>
-          <AppText>{created.nom} · {created.role}</AppText>
+          <AppText>{created.nom} · {ROLE_LABEL[created.role] ?? created.role}</AppText>
           <AppText muted>{created.email}</AppText>
           {created.codeParrainage ? <AppText color={t.brand}>Code de parrainage : {created.codeParrainage}</AppText> : null}
           <Button label="Retour au pilotage" variant="secondary" onPress={() => router.navigate('/admin')} />

@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { confirmCandidature, withdrawCandidature } from '../../../api/candidatures';
+import { confirmCandidature, interestCandidature, withdrawCandidature } from '../../../api/candidatures';
 import { ApiError } from '../../../api/client';
 import { useCandidatures, useMission } from '../../../api/hooks';
 import type { Candidature } from '../../../api/types';
@@ -42,7 +42,13 @@ function Row({ c, act }: { c: Candidature; act: Act }) {
           <Button label="Je ne peux pas" variant="ghost" loading={act.busy === `w${c.id}`} onPress={() => act.run(`w${c.id}`, () => withdrawCandidature(c.id))} />
         </>
       )}
-      {['INTERESSE', 'PROPOSEE'].includes(c.statut) && <Button label="Retirer ma candidature" variant="secondary" loading={act.busy === `w${c.id}`} onPress={() => act.run(`w${c.id}`, () => withdrawCandidature(c.id))} />}
+      {c.statut === 'PROPOSEE' && (
+        <>
+          <AppText variant="caption" muted>Un agent vous propose cette mission. Répondez pour qu’il puisse vous retenir.</AppText>
+          <Button label="Je suis intéressé" icon="hand-left-outline" loading={act.busy === `i${c.id}`} onPress={() => act.run(`i${c.id}`, () => interestCandidature(c.id))} />
+        </>
+      )}
+      {['PROPOSEE', 'INTERESSE'].includes(c.statut) && <Button label={c.statut === 'PROPOSEE' ? 'Refuser la proposition' : 'Retirer ma candidature'} variant="secondary" loading={act.busy === `w${c.id}`} onPress={() => act.run(`w${c.id}`, () => withdrawCandidature(c.id))} />}
       {c.statut === 'CONFIRMEE' && (ask
         ? <Button label="Oui, je me désiste" variant="secondary" loading={act.busy === `w${c.id}`} onPress={() => act.run(`w${c.id}`, () => withdrawCandidature(c.id))} />
         : <Button label="Je ne peux plus venir" variant="ghost" onPress={() => setAsk(true)} />)}
@@ -67,7 +73,7 @@ export default function Demandes() {
       refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor={t.brand} />}>
       <AppText variant="display">Mes demandes</AppText>
       <Segmented value={vue} onChange={setVue} options={[{ value: 'actives', label: 'En cours' }, { value: 'passees', label: 'Passées' }]} />
-      {act.error && <ErrorBox message={act.error.title} code={act.error.code} />}
+      {act.error && <ErrorBox message={act.error.title} />}
       {q.isLoading && <ActivityIndicator color={t.brand} style={{ marginTop: 40 }} />}
       {q.isError && <><ErrorBox message={q.error instanceof ApiError ? q.error.title : 'Impossible de charger vos demandes.'} /><Button label="Réessayer" icon="refresh" onPress={() => q.refetch()} /></>}
       {q.isSuccess && list.length === 0 && (

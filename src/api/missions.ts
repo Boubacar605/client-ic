@@ -1,16 +1,25 @@
 import { api, ApiError, unwrap } from './client';
 import { PUBLISH_MODE } from '../config';
-import { asList, toMission } from '../lib/normalize';
+import { asList, makeReference, toMission } from '../lib/normalize';
 import type { MissionForm } from '../lib/validation';
 import type { Metier, Mission, Profil, Reference, Zone } from './types';
 
 const OUVERTES = ['PUBLIEE', 'PARTIELLEMENT_POURVUE'];
+// Le serveur renvoie déjà les libellés du métier et de la zone : aucune référence n'est nécessaire.
+const PUBLIC_REF = makeReference([], []);
 
 export type PublicMissionSummary = { total: number; page: number; limit: number; totalPages: number };
 
 export const getPublicMissionSummary = () =>
   api.get('/missions/public', { params: { page: 1, limit: 1 } })
     .then((response) => unwrap<PublicMissionSummary>(response));
+
+/** Feed public de la page d'accueil : annonces ouvertes, consultables sans compte. */
+export async function listPublicFeed(limit = 20): Promise<Mission[]> {
+  const rows = asList(unwrap(await api.get('/missions/public', { params: { limit, page: 1 } })))
+    .map((r) => toMission(r, PUBLIC_REF));
+  return rows.filter((m) => OUVERTES.includes(m.statut));
+}
 
 /** Recruteur : ses missions. Travailleur : les missions recommandées, sinon les missions ouvertes. */
 export async function listMissions(profil: Profil, ref: Reference): Promise<Mission[]> {

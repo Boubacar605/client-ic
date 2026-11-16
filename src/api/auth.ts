@@ -8,6 +8,7 @@ export interface RegisterWorker {
   nom: string;
   telephone: string;
   langue: string;
+  agentReferralCode?: string | null;
 }
 export interface RegisterRecruiter {
   email: string;
@@ -33,6 +34,7 @@ export const registerRecruiter = (b: RegisterRecruiter) => api.post('/auth/regis
 export const registerAgent = (b: RegisterAgent) => api.post('/auth/register/agent', b).then((r) => unwrap<RegisterResult>(r));
 export const forgotPassword = (email: string) => api.post('/auth/forgot-password', { email: email.trim().toLowerCase() }).then(unwrap);
 export const resendConfirmation = (email: string) => api.post('/auth/resend-confirmation', { email: email.trim().toLowerCase() }).then(unwrap);
+export const verifyEmail = (token: string) => api.post('/auth/verify-email', { token }).then(unwrap<{ message: string }>);
 export const resetPassword = (token: string, newPassword: string, confirmPassword: string) =>
   api.post('/auth/reset-password', { token, newPassword, confirmPassword }).then(unwrap);
 

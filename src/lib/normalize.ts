@@ -30,7 +30,7 @@ export function toMission(raw: any, ref: Reference): Mission {
     description: raw.description ?? '',
     nombrePostes: Number(raw.nombrePostes ?? 1),
     postesConfirmes: raw.postesConfirmes ?? undefined,
-    postesRestants: raw.postesRestants ?? undefined,
+    postesRestants: raw.placesRestantes ?? raw.postesRestants ?? undefined,
     date: day(raw.dateMission ?? raw.date),
     typeHoraire: (raw.typeHoraire ?? 'TRAVAIL_JOURNALIER') as TypeHoraire,
     heureDebut: hhmm(raw.heureDebut), heureFin: hhmm(raw.heureFin),
@@ -44,6 +44,7 @@ export function toCandidature(raw: any): Candidature {
   return {
     id: String(raw.id), missionId: raw.missionId ?? raw.mission?.id ?? '', travailleurId: raw.travailleurId ?? w?.id ?? w?.userId ?? '',
     travailleurNom: w?.profile?.nom ?? w?.nom, statut: String(raw.statut ?? 'INTERESSE'), canal: raw.canal,
-    dateReponse: raw.dateReponse ?? null, telephone: w?.profile?.telephone ?? w?.telephone ?? null,
+    createdAt: raw.createdAt ?? null, dateReponse: raw.dateReponse ?? null,
+    telephone: w?.profile?.telephone ?? w?.telephone ?? null,
   };
 }

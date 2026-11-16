@@ -21,6 +21,7 @@ import { ErrorBox } from '../../../ui/ErrorBox';
 import { HourPicker } from '../../../ui/HourPicker';
 import { MetierPicker } from '../../../ui/MetierPicker';
 import { Section } from '../../../ui/Section';
+import { SelectField } from '../../../ui/SelectField';
 import { Stepper } from '../../../ui/Stepper';
 import { TextField } from '../../../ui/TextField';
 
@@ -91,7 +92,10 @@ export default function Publier() {
     return <Body scrollRef={scroll}><ErrorBox message={ref.error instanceof ApiError ? ref.error.title : 'Impossible de charger les métiers et les zones.'} /><Button label="Réessayer" icon="refresh" onPress={() => ref.refetch()} /></Body>;
   }
 
-  const { metiers, zones } = ref.data;
+  const { metiers, zones, zoneById } = ref.data;
+  const lieux = zones
+    .map((z) => ({ value: z.id, label: z.nom, hint: z.parentId ? zoneById.get(z.parentId)?.nom ?? undefined : 'Région' }))
+    .sort((a, b) => (a.hint ?? '').localeCompare(b.hint ?? '') || a.label.localeCompare(b.label));
   const summary = Object.values(err).filter(Boolean).length;
 
   return (
@@ -101,7 +105,7 @@ export default function Publier() {
         <AppText muted>Touchez, choisissez, publiez : deux minutes.</AppText>
       </View>
 
-      {apiErr && <ErrorBox message={apiErr.title} code={apiErr.code} />}
+      {apiErr && <ErrorBox message={apiErr.title} />}
       {summary > 0 && !apiErr && <ErrorBox message="Corrigez les éléments en rouge pour continuer." />}
 
       <Section n={1} title="Quel travail ?" hint="Ouvrez la liste et choisissez le métier." error={err.metierId}>
@@ -114,9 +118,11 @@ export default function Publier() {
         />
       </Section>
 
-      <Section n={2} title="Où ?" hint="Le quartier et, si besoin, le lieu exact." error={err.zoneId}>
-        <ChipGroup value={f.zoneId} onChange={(v) => set('zoneId', v)} options={zones.map((z) => ({ value: z.id, label: z.nom }))} />
-        <TextField label="Lieu précis (facultatif)" icon="location-outline" placeholder="Ex. Rue 12, près de la mosquée"
+      <Section n={2} title="Où ?" hint="Choisissez le lieu dans la liste, puis ajoutez un repère si besoin.">
+        <SelectField label="Lieu de la mission" title="Choisir un lieu" icon="location-outline"
+          placeholder="Sélectionner un quartier" options={lieux} value={f.zoneId}
+          onChange={(v) => set('zoneId', v)} error={err.zoneId} />
+        <TextField label="Repère précis (facultatif)" icon="pin-outline" placeholder="Ex. Rue 12, près de la mosquée"
           value={f.lieu} onChangeText={(v) => set('lieu', v)} error={err.lieu} maxLength={255} />
       </Section>
 

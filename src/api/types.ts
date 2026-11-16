@@ -22,7 +22,7 @@ export interface Mission {
 }
 export interface Candidature {
   id: string; missionId: string; travailleurId: string; travailleurNom?: string;
-  statut: string; canal?: string; dateReponse?: string | null; telephone?: string | null;
+  statut: string; canal?: string; createdAt?: string | null; dateReponse?: string | null; telephone?: string | null;
 }
 
 export interface Notification {

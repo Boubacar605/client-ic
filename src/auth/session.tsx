@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { fetchMe, fetchProfil, logoutApi, LoginResult } from '../api/auth';
 import { setSessionExpiredHandler } from '../api/client';
-import type { AuthUser, Profil } from '../api/types';
+import type { Profil } from '../api/types';
 import { loadBaseUrl } from '../config';
 import { tokens } from './tokens';
 
@@ -9,7 +9,7 @@ type Status = 'loading' | 'signedOut' | 'signedIn';
 interface Session {
   status: Status;
   profil: Profil | null;
-  signIn: (r: LoginResult) => Promise<void>;
+  signIn: (r: LoginResult) => Promise<Profil>;
   signOut: () => Promise<void>;
 }
 const Ctx = createContext<Session | null>(null);
@@ -35,7 +35,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (r: LoginResult) => {
     await tokens.save(r.accessToken, r.refreshToken);
     // Le rôle doit venir du serveur : un utilisateur sans rôle ferait atterrir tout le monde sur le même espace.
-    let base: AuthUser;
+    let base: Profil;
     try {
       base = await fetchMe();
     } catch (error) {
@@ -47,6 +47,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     setProfil(base); setStatus('signedIn');
     fetchProfil(base).then(setProfil).catch(() => {}); // nom et téléphone arrivent juste après
+    return base;
   }, []);
 
   const signOut = useCallback(async () => {
