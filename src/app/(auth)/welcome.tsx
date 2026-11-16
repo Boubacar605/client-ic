@@ -60,22 +60,23 @@ export default function Welcome() {
           <Animated.View key={sl.photo} pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: fades[k], backgroundColor: sl.couleur }]}>
             {photo ? (
               k === 1 ? (
-                /* Slide centrale (app mockup) : plein écran, image centrée */
+                /* Slide centrale (app mockup) : plein écran */
                 <Image
                   source={photo}
-                  style={[StyleSheet.absoluteFill, { opacity: 0.85 }]}
+                  style={[StyleSheet.absoluteFill, { opacity: 0.45 }]}
                   resizeMode="cover"
                 />
               ) : (
-                /* Slides avec personnes : pleine largeur, recadrées */
-                <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.8 }]} resizeMode="cover" />
+                /* Slides avec personnes : pleine largeur */
+                <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.45 }]} resizeMode="cover" />
               )
             ) : (
               <MaterialCommunityIcons name={sl.icon} size={300} color="rgba(255,255,255,0.16)" style={s.bgIcon} />
             )}
+            {/* Overlay fort pour masquer le texte embedded des images marketing */}
             <LinearGradient
-              colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.90)']}
-              locations={[0, 0.45, 1]}
+              colors={['rgba(0,0,0,0.80)', 'rgba(0,0,0,0.70)', 'rgba(0,0,0,0.92)']}
+              locations={[0, 0.5, 1]}
               style={StyleSheet.absoluteFill}
             />
             <View style={[s.text, { bottom: insets.bottom + 150 }]}>
