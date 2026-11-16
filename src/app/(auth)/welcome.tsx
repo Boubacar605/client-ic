@@ -59,9 +59,14 @@ export default function Welcome() {
         return (
           <Animated.View key={sl.photo} pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: fades[k], backgroundColor: sl.couleur }]}>
             {photo
-              ? <Image source={photo} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              ? <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.75 }]} resizeMode="cover" />
               : <MaterialCommunityIcons name={sl.icon} size={300} color="rgba(255,255,255,0.16)" style={s.bgIcon} />}
-            <LinearGradient colors={['rgba(0,0,0,0.35)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.9)']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+            {/* Dégradé renforcé pour masquer le texte embedded des images marketing */}
+            <LinearGradient
+              colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.92)']}
+              locations={[0, 0.45, 1]}
+              style={StyleSheet.absoluteFill}
+            />
             <View style={[s.text, { bottom: insets.bottom + 150 }]}>
               <AppText variant="display" color="#ffffff">{sl.titre}</AppText>
               <AppText color="rgba(255,255,255,0.88)">{sl.texte}</AppText>
