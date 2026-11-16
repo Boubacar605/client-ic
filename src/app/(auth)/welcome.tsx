@@ -58,12 +58,41 @@ export default function Welcome() {
         const photo = ACCUEIL_PHOTOS[sl.photo];
         return (
           <Animated.View key={sl.photo} pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: fades[k], backgroundColor: sl.couleur }]}>
-            {photo
-              ? <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.75 }]} resizeMode="cover" />
-              : <MaterialCommunityIcons name={sl.icon} size={300} color="rgba(255,255,255,0.16)" style={s.bgIcon} />}
-            {/* Dégradé renforcé pour masquer le texte embedded des images marketing */}
+            {photo ? (
+              k === 1 ? (
+                /* Slide centrale (app mockup) : centrée avec fond vert qui flotte sur les côtés */
+                <View style={StyleSheet.absoluteFill}>
+                  {/* Fond vert dégradé gauche et droite */}
+                  <LinearGradient
+                    colors={[sl.couleur, 'transparent', 'transparent', sl.couleur]}
+                    locations={[0, 0.2, 0.8, 1]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <Image
+                    source={photo}
+                    style={[StyleSheet.absoluteFill, { opacity: 0.9 }]}
+                    resizeMode="contain"
+                  />
+                  {/* Re-applique le dégradé vert sur les côtés par dessus l'image */}
+                  <LinearGradient
+                    colors={[sl.couleur, 'transparent', 'transparent', sl.couleur]}
+                    locations={[0, 0.15, 0.85, 1]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </View>
+              ) : (
+                /* Slides avec personnes : pleine largeur, recadrées */
+                <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.8 }]} resizeMode="cover" />
+              )
+            ) : (
+              <MaterialCommunityIcons name={sl.icon} size={300} color="rgba(255,255,255,0.16)" style={s.bgIcon} />
+            )}
             <LinearGradient
-              colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.92)']}
+              colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.90)']}
               locations={[0, 0.45, 1]}
               style={StyleSheet.absoluteFill}
             />
