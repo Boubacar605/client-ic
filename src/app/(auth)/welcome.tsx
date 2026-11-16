@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Dimensions, Image, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { getPublicMissionSummary } from '../../api/missions';
@@ -17,17 +17,20 @@ type Slide = { photo: string; icon: MetierIcon; couleur: string; titre: string; 
 const SLIDES: Slide[] = [
   { photo: 'accueil-1', icon: 'hammer-wrench', couleur: '#1a4a24',
     titre: 'Travaillez. Trouvez. Avancez.',
-    texte: 'Maçons, jardiniers, lessiveuses… recevez les missions de votre quartier et répondez en un geste.' },
+    texte: 'Macons, jardiniers, lessiveuses... recevez les missions de votre quartier et repondez en un geste.' },
   { photo: 'accueil-2', icon: 'account-group', couleur: '#0d3318',
     titre: 'Besoin de bras demain ?',
-    texte: 'Publiez votre besoin en deux minutes. Nous prévenons les bons travailleurs, vous choisissez.' },
+    texte: 'Publiez votre besoin en deux minutes. Nous prevenons les bons travailleurs, vous choisissez.' },
   { photo: 'accueil-3', icon: 'whatsapp', couleur: '#163b1e',
     titre: 'Pour tout le monde',
-    texte: 'Application, WhatsApp ou appel d\'un agent : répondez comme vous pouvez, depuis Dakar ou Thiès.' },
+    texte: 'Application, WhatsApp ou appel d\'un agent : repondez comme vous pouvez, depuis Dakar ou Thies.' },
 ];
 const DELAY = 4500;
 
-// Écran d'accueil toujours sombre et photographique (comme celui de DakarGo), quel que soit le mode du téléphone.
+const fullScreen = Platform.OS === 'web'
+  ? { position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0, width: '100vw' as any, height: '100vh' as any }
+  : StyleSheet.absoluteFillObject;
+
 export default function Welcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -57,29 +60,21 @@ export default function Welcome() {
       {SLIDES.map((sl, k) => {
         const photo = ACCUEIL_PHOTOS[sl.photo];
         return (
-          <Animated.View key={sl.photo} pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: fades[k], backgroundColor: sl.couleur }]}>
+          <Animated.View key={sl.photo} pointerEvents="none" style={[fullScreen, { opacity: fades[k], backgroundColor: sl.couleur }]}>
             {photo ? (
-              k === 1 ? (
-                /* Slide centrale (app mockup) : plein écran */
-                <Image
-                  source={photo}
-                  style={[StyleSheet.absoluteFill, { opacity: 0.3 }]}
-                  resizeMode="cover"
-                />
-              ) : (
-                /* Slides avec personnes : pleine largeur */
-                <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.3 }]} resizeMode="cover" />
-              )
+              <Image
+                source={photo}
+                style={[fullScreen, { opacity: 0.35 }]}
+                resizeMode="cover"
+              />
             ) : (
               <MaterialCommunityIcons name={sl.icon} size={300} color="rgba(255,255,255,0.16)" style={s.bgIcon} />
             )}
-            {/* Overlay vert brand — masque le texte embedded, garde l'atmosphère */}
-            {/* Color wash — brand green masque le texte marketing, les silhouettes restent */}
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: sl.couleur, opacity: 0.78 }]} />
+            <View style={[fullScreen, { backgroundColor: sl.couleur, opacity: 0.65 }]} />
             <LinearGradient
-              colors={['rgba(0,0,0,0.2)', 'transparent', 'rgba(0,0,0,0.80)']}
-              locations={[0, 0.5, 1]}
-              style={StyleSheet.absoluteFill}
+              colors={['rgba(0,0,0,0.15)', 'transparent', 'rgba(0,0,0,0.82)']}
+              locations={[0, 0.45, 1]}
+              style={fullScreen}
             />
             <View style={[s.text, { bottom: insets.bottom + 150 }]}>
               <AppText variant="display" color="#ffffff">{sl.titre}</AppText>
@@ -103,7 +98,7 @@ export default function Welcome() {
             <Ionicons name="briefcase-outline" size={22} color="#f2b705" />
             <View style={{ flex: 1 }}>
               <AppText variant="heading" color="#ffffff">{publicMissions.data.total} mission{publicMissions.data.total > 1 ? 's' : ''} disponible{publicMissions.data.total > 1 ? 's' : ''}</AppText>
-              <AppText variant="caption" color="rgba(255,255,255,0.78)">Près de chez vous</AppText>
+              <AppText variant="caption" color="rgba(255,255,255,0.78)">Pres de chez vous</AppText>
             </View>
           </Card>
         ) : null}
@@ -118,11 +113,15 @@ export default function Welcome() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, width: '100%', height: '100%', backgroundColor: '#061209' },
+  root: {
+    flex: 1,
+    backgroundColor: '#061209',
+    ...(Platform.OS === 'web' ? { width: '100vw' as any, height: '100vh' as any, overflow: 'hidden' as any } : {}),
+  },
   bgIcon: { position: 'absolute', alignSelf: 'center', top: '14%' },
   text: { position: 'absolute', left: 24, right: 24, gap: 10 },
-  header: { position: 'absolute', left: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  footer: { position: 'absolute', left: 24, right: 24, gap: 18 },
+  header: { position: 'absolute', left: 20, flexDirection: 'row', alignItems: 'center', gap: 10, zIndex: 10 },
+  footer: { position: 'absolute', left: 24, right: 24, gap: 18, zIndex: 10 },
   missionStat: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(20,32,28,0.82)', borderColor: 'rgba(255,255,255,0.2)' },
   dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot: { height: 8, borderRadius: 4 },
