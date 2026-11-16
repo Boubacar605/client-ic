@@ -1,56 +1,136 @@
-# Welcome to your Expo app 👋
+# XeuySil — Application Client (Intégration Continue)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Dépôt du frontend de la plateforme **XeuySil** — mise en relation entre recruteurs et travailleurs journaliers au Sénégal.
 
-## Get started
+## Présentation
 
-1. Install dependencies
+XeuySil est une application universelle (mobile Android/iOS + web) construite avec **Expo / React Native**. Elle regroupe en une seule app quatre espaces distincts selon le rôle de l'utilisateur :
 
-   ```bash
-   npm install
-   ```
+| Rôle | Espace | Fonctionnalités principales |
+|------|--------|----------------------------|
+| **Travailleur** | `/travailleur` | Consulter les missions, gérer les disponibilités, suivre les candidatures |
+| **Recruteur** | `/recruteur` | Publier des missions, sélectionner des candidats, suivre les présences |
+| **Agent** | `/agent` | Inscrire des travailleurs, transmettre des réponses, proposer des missions |
+| **Administrateur** | `/admin` | Tableau de bord, gestion des comptes, référentiels, commissions |
 
-2. Start the app
+## Stack technique
 
-   ```bash
-   npx expo start
-   ```
+| Couche | Technologie | Version |
+|--------|------------|---------|
+| Framework mobile | Expo / React Native | SDK 58 |
+| Langage | TypeScript | 6.0 |
+| Navigation | Expo Router (file-based) | 58 |
+| Requêtes API | TanStack Query + Axios | 5.x / 1.x |
+| Stockage sécurisé | expo-secure-store | — |
+| Style | React Native StyleSheet + design tokens | — |
+| Linter | expo lint (ESLint interne) | — |
 
-In the output, you'll find options to open the app in a
+## Architecture
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+L'application utilise le routage par fichiers d'Expo Router. Les routes non connectées se trouvent dans `(auth)/`, les routes connectées dans `(app)/`.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/
+├── app/
+│   ├── (auth)/          # Pages non connectées (welcome, login, register…)
+│   ├── (app)/           # Pages connectées
+│   │   ├── admin/       # Back-office administrateur
+│   │   ├── agent/       # Espace agent terrain
+│   │   ├── recruteur/   # Espace recruteur
+│   │   └── travailleur/ # Espace travailleur
+├── api/                 # Couche réseau (axios + hooks TanStack Query)
+├── auth/                # Gestion de session (JWT + sessionStorage démo)
+├── data/                # Données statiques (métiers, photos)
+├── lib/                 # Utilitaires (format, validation, stockage)
+├── theme/               # Design tokens (couleurs, espacements, rayons)
+└── ui/                  # 30+ composants réutilisables
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Prérequis
 
-### Other setup steps
+- Node.js ≥ 20
+- npm ≥ 10
+- Expo CLI (`npm install -g expo-cli`) ou `npx expo`
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Installation
 
-## Learn more
+```bash
+# Cloner le dépôt
+git clone git@github.com:Boubacar605/client-ic.git
+cd client-ic
 
-To learn more about developing your project with Expo, look at the following resources:
+# Installer les dépendances
+npm ci
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Copier et configurer les variables d'environnement
+cp .env.example .env
+# Modifier EXPO_PUBLIC_API_URL avec l'adresse de votre backend
+```
 
-## Join the community
+## Variables d'environnement
 
-Join our community of developers creating universal apps.
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `EXPO_PUBLIC_API_URL` | URL de l'API backend (mobile) | `http://192.168.1.10:8080/api/v1` |
+| `EXPO_PUBLIC_API_URL_WEB` | URL de l'API backend (web) | `http://localhost:8080/api/v1` |
+| `EXPO_PUBLIC_ADMIN_ROUTE` | Route d'accès administration | `backoffice-acces` |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Voir `.env.example` pour le modèle complet.
+
+## Scripts disponibles
+
+```bash
+# Démarrer le serveur de développement
+npx expo start
+
+# Lancer sur Android
+npx expo start --android
+
+# Lancer sur iOS
+npx expo start --ios
+
+# Lancer en mode web
+npx expo start --web
+
+# Vérifier le style (lint)
+npx expo lint
+
+# Exporter pour le web (production)
+npx expo export --platform web
+```
+
+## Pipeline CI (Jenkins)
+
+Le pipeline d'intégration continue est défini dans `Jenkinsfile` :
+
+| Étape | Commande | Description |
+|-------|---------|-------------|
+| Checkout | `checkout scm` | Récupération du code depuis Git |
+| Installation | `npm ci` | Installation des dépendances |
+| Lint | `expo lint` | Vérification du style de code |
+| Export web | `expo export --platform web` | Génération des fichiers statiques |
+| Docker build | `docker build .` | Construction de l'image nginx |
+| Trivy scan | `trivy image` | Analyse des vulnérabilités |
+| Push | `docker push` | Publication sur Docker Hub |
+
+**Image publiée :** `boubacar605/xeuysil-client:latest`
+
+## Connexion démo (sans backend Supabase)
+
+L'API expose un endpoint `/auth/demo-login/:role` qui génère un JWT local signé sans passer par Supabase. Cela permet de tester l'interface complète en local :
+
+- **Travailleur** — Amadou Diallo (démo)
+- **Recruteur** — Fatou Ndiaye (démo)
+- **Agent** — Moussa Sarr (démo)
+- **Administrateur** — Admin Démo
+
+## Équipe
+
+| Membre | Rôle |
+|--------|------|
+| Malick Cissoko | Développement frontend (mobile + administration) |
+| Boubacar NIANG | Intégration continue et déploiement |
+
+## Licence
+
+Projet universitaire — Master 2 SI-SR, UADB (2026-2027).
