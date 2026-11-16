@@ -6,6 +6,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAdminUser, updateUserPremium, updateUserStatus } from '../../../../api/admin';
 import { ApiError } from '../../../../api/client';
+import { useSession } from '../../../../auth/session';
+import { ROLE_LABEL, STATUT_COMPTE } from '../../../../lib/format';
 import { useTheme } from '../../../../theme/useTheme';
 import { AppText } from '../../../../ui/AppText';
 import { Button } from '../../../../ui/Button';
@@ -18,6 +20,7 @@ export default function AdminUserDetail() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { profil } = useSession();
   const q = useQuery({ queryKey: ['admin-user', id], enabled: !!id, queryFn: () => getAdminUser(id!) });
   const invalidate = () => { qc.invalidateQueries({ queryKey: ['admin-user', id] }); qc.invalidateQueries({ queryKey: ['admin-users'] }); };
   const status = useMutation({ mutationFn: (value: string) => updateUserStatus(id!, value), onSuccess: invalidate });
@@ -40,17 +43,19 @@ export default function AdminUserDetail() {
         <>
           <Card>
             <View style={s.row}><Ionicons name="person-circle-outline" size={26} color={t.brand} /><AppText variant="title" numberOfLines={1}>{u.nom}</AppText></View>
-            <AppText muted>Rôle : {u.role}</AppText>
-            <AppText muted>Statut : {u.statut}</AppText>
+            <AppText muted>Rôle : {ROLE_LABEL[u.role] ?? u.role}</AppText>
+            <AppText muted>Statut : {STATUT_COMPTE[u.statut] ?? u.statut}</AppText>
             {u.telephone ? <AppText muted>Téléphone : {u.telephone}</AppText> : null}
             <AppText muted>Premium : {u.isPremium ? 'oui' : 'non'}</AppText>
           </Card>
 
           <Card>
             <AppText variant="heading">Modération</AppText>
-            {u.statut === 'ACTIF'
-              ? <Button label="Suspendre le compte" icon="pause-circle-outline" variant="secondary" loading={status.isPending} onPress={() => status.mutate('SUSPENDU')} />
-              : <Button label="Réactiver le compte" icon="play-circle-outline" loading={status.isPending} onPress={() => status.mutate('ACTIF')} />}
+            {u.id === profil?.id
+              ? <AppText muted>Vous ne pouvez pas désactiver votre propre compte.</AppText>
+              : u.statut === 'ACTIF'
+                ? <Button label="Suspendre le compte" icon="pause-circle-outline" variant="secondary" loading={status.isPending} onPress={() => status.mutate('SUSPENDU')} />
+                : <Button label="Réactiver le compte" icon="play-circle-outline" loading={status.isPending} onPress={() => status.mutate('ACTIF')} />}
             <Button label={u.isPremium ? 'Retirer le premium' : 'Activer le premium'} icon="star-outline" variant="secondary" loading={premium.isPending} onPress={() => premium.mutate(!u.isPremium)} />
           </Card>
         </>

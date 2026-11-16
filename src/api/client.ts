@@ -2,25 +2,35 @@ import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 import * as Crypto from 'expo-crypto';
 import { tokens } from '../auth/tokens';
 import { getBaseUrl } from '../config';
+import { friendlyFieldMessage, networkErrorMessage, serverErrorMessage, userSafeTitle } from '../lib/errorMessages';
 import { addLog } from './log';
 
 export const api = axios.create({ timeout: 20000, headers: { Accept: 'application/json', 'ngrok-skip-browser-warning': 'true' } });
 
-/** Erreur normalisée. `code` = errorCode du backend, `title` = son message (en français). */
+/** Erreur normalisée. `code` sert à la logique interne, `title` est un message français prêt à afficher. */
 export class ApiError extends Error {
+  public title: string;
   constructor(
     public status: number,
     public code: string,
-    public title: string,
+    title: string,
     public errors?: { champ: string; message: string }[],
     public correlationId?: string,
-  ) { super(title); }
+  ) {
+    super(userSafeTitle(title));
+    this.title = this.message;
+  }
 }
 
-/** Le backend enveloppe tout dans { success, message, data } : on renvoie le contenu de `data`. */
+/**
+ * Certains déploiements enveloppent la réponse dans { success, message, data }.
+ * On ne déballe que cet enveloppe explicite : un objet paginé { data: [...], page, … }
+ * doit garder sa forme, sinon `page.data` devient un tableau et les écrans cassent.
+ */
 export const unwrap = <T = any>(r: AxiosResponse): T => {
   const b = r.data;
-  return (b && typeof b === 'object' && 'data' in b ? b.data : b) as T;
+  if (b && typeof b === 'object' && 'success' in b && 'data' in b) return b.data as T;
+  return b as T;
 };
 
 export const errorText = (e: unknown) => (e instanceof ApiError ? e.title : 'Une erreur est survenue.');
@@ -43,25 +53,33 @@ function toApiError(e: unknown): ApiError {
     const d = err.response.data;
     const status = err.response.status;
     if (d == null || typeof d !== 'object') {
-      const ngrok = typeof d === 'string' && d.toLowerCase().includes('ngrok');
-      return new ApiError(status, 'REPONSE_INVALIDE', ngrok
-        ? 'Le tunnel ngrok est arrêté ou son adresse a changé. Demandez la nouvelle adresse à Ibrahima.'
-        : 'Le serveur a répondu autre chose que du JSON. Vérifiez l’adresse du serveur.');
+      return new ApiError(status, `HTTP_${status}`, serverErrorMessage(status));
     }
-    let errors: { champ: string; message: string }[] | undefined;
     const list = Array.isArray(d.errors) ? d.errors : Array.isArray(d.details) ? d.details : undefined;
-    if (list) errors = list.map((x: any) => ({ champ: x.field ?? x.champ ?? x.property ?? '', message: x.message ?? String(x) }));
-    const rawTitle = Array.isArray(d.message) ? d.message.join(' ; ') : d.message ?? d.title;
-    const title = typeof rawTitle === 'string'
-      ? rawTitle
-      : rawTitle && typeof rawTitle === 'object' && typeof rawTitle.message === 'string'
-        ? rawTitle.message
-        : 'Une erreur est survenue';
-    if (!errors && Array.isArray(d.message)) errors = d.message.map((m: string) => ({ champ: '', message: m }));
-    return new ApiError(status, d.errorCode ?? d.code ?? `HTTP_${status}`, title, errors, d.correlationId);
+    let errors: { champ: string; message: string }[] | undefined;
+    if (list) {
+      errors = list.map((x: any) => {
+        const champ = x.field ?? x.champ ?? x.property ?? '';
+        return { champ, message: friendlyFieldMessage(champ) };
+      });
+    } else if (Array.isArray(d.message)) {
+      // ValidationPipe : chaque entrée commence par le nom du champ.
+      errors = d.message.map((m: string) => {
+        const champ = String(m).split(' ')[0].replace(/[^A-Za-z0-9_.]/g, '');
+        return { champ, message: friendlyFieldMessage(champ) };
+      });
+    }
+    const rawMessage = Array.isArray(d.message)
+      ? d.message.join(' ; ')
+      : typeof d.message === 'string'
+        ? d.message
+        : typeof d.title === 'string' ? d.title : undefined;
+    const code = d.errorCode ?? d.code ?? `HTTP_${status}`;
+    return new ApiError(status, code, serverErrorMessage(status, code, rawMessage), errors, d.correlationId);
   }
-  if (err.code === 'ECONNABORTED') return new ApiError(0, 'DELAI', 'Le serveur met trop de temps à répondre.');
-  return new ApiError(0, 'RESEAU', 'Pas de connexion au serveur. Vérifiez le réseau et l’adresse du serveur.');
+  const timeout = err.code === 'ECONNABORTED';
+  const code = timeout ? 'DELAI' : 'RESEAU';
+  return new ApiError(0, code, networkErrorMessage(code));
 }
 
 api.interceptors.request.use((config) => {

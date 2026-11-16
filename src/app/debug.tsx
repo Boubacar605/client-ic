@@ -18,15 +18,16 @@ export default function Debug() {
   const insets = useSafeAreaInsets();
   const [url, setUrl] = useState(getBaseUrl());
   const [msg, setMsg] = useState('');
+  const [msgKo, setMsgKo] = useState(false);
   const [tick, setTick] = useState(0);
   const logs = getLogs();
   void tick;
 
-  async function save() { await setBaseUrl(url); setUrl(getBaseUrl()); setMsg('Adresse enregistrée.'); }
+  async function save() { await setBaseUrl(url); setUrl(getBaseUrl()); setMsg('Adresse enregistrée.'); setMsgKo(false); }
   async function test() {
-    setMsg('Test en cours…');
-    try { await save(); const r = await api.get('/bootstrap'); setMsg(`Serveur joint : HTTP ${r.status}.`); }
-    catch (e: any) { setMsg(`Échec : ${e?.title ?? e?.message ?? 'inconnu'} (${e?.code ?? '?'})`); }
+    setMsg('Test en cours…'); setMsgKo(false);
+    try { await save(); await api.get('/bootstrap'); setMsg('Connexion au serveur établie.'); }
+    catch { setMsg('Connexion au serveur impossible. Vérifiez l’adresse puis réessayez.'); setMsgKo(true); }
     setTick((n) => n + 1);
   }
 
@@ -35,10 +36,10 @@ export default function Debug() {
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/welcome'))} accessibilityRole="button"><AppText color={t.brand} style={{ fontWeight: '700' }}>‹ Retour</AppText></Pressable>
       <AppText variant="display">Diagnostic</AppText>
       <Card>
-        <TextField label="Adresse du serveur" autoCapitalize="none" autoCorrect={false} keyboardType="url" value={url} onChangeText={setUrl}
+        <TextField label="Adresse du serveur" autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="https://mon-serveur.ngrok.app" value={url} onChangeText={setUrl}
           hint="Adresse ngrok complète, sans / à la fin et sans /v1." />
         <Button label="Enregistrer et tester" icon="pulse" onPress={test} />
-        {msg ? <AppText variant="label" color={msg.startsWith('Échec') ? t.error : t.brand}>{msg}</AppText> : null}
+        {msg ? <AppText variant="label" color={msgKo ? t.error : t.brand}>{msg}</AppText> : null}
       </Card>
       <View style={s.head}>
         <AppText variant="heading">Derniers appels ({logs.length})</AppText>

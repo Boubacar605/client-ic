@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { fetchMe, fetchProfil, logoutApi, LoginResult } from '../api/auth';
 import { setSessionExpiredHandler } from '../api/client';
-import type { AuthUser, Profil } from '../api/types';
+import type { Profil } from '../api/types';
 import { loadBaseUrl } from '../config';
 import { tokens } from './tokens';
 
@@ -9,7 +9,7 @@ type Status = 'loading' | 'signedOut' | 'signedIn';
 interface Session {
   status: Status;
   profil: Profil | null;
-  signIn: (r: LoginResult) => Promise<void>;
+  signIn: (r: LoginResult) => Promise<Profil>;
   signInDemo: (profil: Profil) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -20,13 +20,24 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [profil, setProfil] = useState<Profil | null>(null);
 
   useEffect(() => {
-    setSessionExpiredHandler(() => { setProfil(null); setStatus('signedOut'); });
+    setSessionExpiredHandler(() => {
+      // En mode démo, on ignore l'expiration de session (pas de vrais jetons)
+      if (typeof window !== 'undefined' && window.sessionStorage.getItem('xs_demo_profil')) return;
+      setProfil(null); setStatus('signedOut');
+    });
     (async () => {
       await loadBaseUrl();
+      // Mode démo : le profil est stocké en sessionStorage pour survivre à la navigation
+      if (typeof window !== 'undefined') {
+        const raw = window.sessionStorage.getItem('xs_demo_profil');
+        if (raw) {
+          try { setProfil(JSON.parse(raw)); setStatus('signedIn'); return; } catch {}
+        }
+      }
       const { refresh } = await tokens.load();
       if (!refresh) return setStatus('signedOut');
       try {
-        const me = await fetchMe(); // renouvelle le jeton au besoin
+        const me = await fetchMe();
         setProfil(me); setStatus('signedIn');
         fetchProfil(me).then(setProfil).catch(() => {});
       } catch { await tokens.clear(); setStatus('signedOut'); }
@@ -36,7 +47,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (r: LoginResult) => {
     await tokens.save(r.accessToken, r.refreshToken);
     // Le rôle doit venir du serveur : un utilisateur sans rôle ferait atterrir tout le monde sur le même espace.
-    let base: AuthUser;
+    let base: Profil;
     try {
       base = await fetchMe();
     } catch (error) {
@@ -48,10 +59,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     setProfil(base); setStatus('signedIn');
     fetchProfil(base).then(setProfil).catch(() => {}); // nom et téléphone arrivent juste après
+    return base;
   }, []);
 
   const signInDemo = useCallback(async (profil: Profil) => {
-    await tokens.clear(); // pas de vrais jetons en mode démo
+    await tokens.clear();
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('xs_demo_profil', JSON.stringify(profil));
+    }
     setProfil(profil);
     setStatus('signedIn');
   }, []);
@@ -59,6 +74,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     try { await logoutApi(); } catch { /* hors ligne : on déconnecte quand même */ }
     await tokens.clear();
+    if (typeof window !== 'undefined') window.sessionStorage.removeItem('xs_demo_profil');
     setProfil(null); setStatus('signedOut');
   }, []);
 

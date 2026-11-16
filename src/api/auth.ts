@@ -37,7 +37,12 @@ export const resetPassword = (token: string, newPassword: string, confirmPasswor
   api.post('/auth/reset-password', { token, newPassword, confirmPassword }).then(unwrap);
 
 export interface LoginResult { accessToken: string; refreshToken: string; user?: AuthUser }
-export async function login(email: string, password: string): Promise<LoginResult> {
+export async function login(email: string, password: string, demoRole?: string): Promise<LoginResult> {
+  if (demoRole) {
+    // Connexion démo : appel à l'endpoint local qui génère un vrai JWT
+    const d = unwrap<any>(await api.post(`/auth/demo-login/${demoRole}`));
+    return { accessToken: d.accessToken, refreshToken: d.refreshToken, user: d.user };
+  }
   const d = unwrap<any>(await api.post('/auth/login', { email: email.trim().toLowerCase(), password }));
   return { accessToken: d.accessToken, refreshToken: d.refreshToken, user: d.user ?? d.utilisateur };
 }

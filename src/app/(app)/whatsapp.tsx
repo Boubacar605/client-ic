@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError } from '../../api/client';
 import { whatsappHistory } from '../../api/whatsapp';
+import { NOTIFICATION_LABEL } from '../../lib/format';
 import { useTheme } from '../../theme/useTheme';
 import { AppText } from '../../ui/AppText';
 import { Card } from '../../ui/Card';
@@ -14,11 +15,7 @@ import { ErrorBox } from '../../ui/ErrorBox';
 const STATUT: Record<string, string> = {
   EN_FILE: 'En file', ENVOYE: 'Envoyé', LIVRE: 'Livré', LU: 'Lu', ECHEC: 'Échec',
 };
-const TYPE: Record<string, string> = {
-  MISSION_PROPOSAL: 'Proposition de mission',
-  MISSION_SELECTION: 'Sélection',
-  MISSION_REMINDER: 'Rappel',
-};
+const TYPE: Record<string, string> = { ...NOTIFICATION_LABEL, MISSION_RAPPEL: 'Rappel de mission' };
 
 // Journal des messages WhatsApp envoyés par l'utilisateur connecté (recruteur ou agent).
 export default function WhatsAppHistory() {

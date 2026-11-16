@@ -13,7 +13,17 @@ import { Button } from '../../../../ui/Button';
 import { Card } from '../../../../ui/Card';
 import { ErrorBox } from '../../../../ui/ErrorBox';
 
-const ACTIONS = ['PUBLIEE', 'SUSPENDUE', 'CLOTUREE', 'ANNULEE', 'TERMINEE'];
+const ACTIONS = ['PUBLIEE', 'EN_COURS', 'SUSPENDUE', 'CLOTUREE', 'ANNULEE', 'TERMINEE', 'EXPIREE'];
+const ALLOWED_FROM: Record<string, string[]> = {
+  PUBLIEE: ['BROUILLON'],
+  EN_COURS: ['POURVUE', 'PARTIELLEMENT_POURVUE'],
+  SUSPENDUE: ['PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE'],
+  CLOTUREE: ['PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE', 'EN_COURS'],
+  ANNULEE: ['BROUILLON', 'PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE', 'EN_COURS'],
+  TERMINEE: ['EN_COURS'],
+  EXPIREE: ['PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE'],
+};
+const actionsFor = (statut: string) => ACTIONS.filter((a) => ALLOWED_FROM[a]?.includes(statut));
 
 export default function AdminMissionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -59,13 +69,14 @@ export default function AdminMissionDetail() {
         <Card>
           <AppText variant="heading">Changer le statut</AppText>
           <View style={s.filters}>
-            {ACTIONS.filter((a) => a !== m.statut).map((a) => (
+            {actionsFor(m.statut).map((a) => (
               <Pressable key={a} accessibilityRole="button" disabled={change.isPending} onPress={() => change.mutate(a)}
                 style={[s.chip, { borderColor: t.brand, backgroundColor: t.card }]}>
                 <AppText variant="caption" color={t.brand}>{STATUT_MISSION[a] ?? a}</AppText>
               </Pressable>
             ))}
           </View>
+          {!actionsFor(m.statut).length && <AppText variant="caption" muted>Aucune transition disponible pour ce statut.</AppText>}
           {change.isSuccess ? <AppText color={t.brand} style={{ fontWeight: '700' }}>Statut mis à jour.</AppText> : null}
         </Card>
       )}

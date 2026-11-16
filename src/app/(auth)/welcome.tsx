@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -30,7 +30,7 @@ export default function Welcome() {
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(false);
   const publicMissions = useQuery({ queryKey: ['public-mission-summary'], queryFn: getPublicMissionSummary, enabled: mounted });
-  const fades = useRef(SLIDES.map((_, k) => new Animated.Value(k === 0 ? 1 : 0))).current;
+  const fades = useMemo(() => SLIDES.map((_, k) => new Animated.Value(k === 0 ? 1 : 0)), []);
   const current = useRef(0);
   const [dot, setDot] = useState(0);
 

@@ -15,14 +15,15 @@ export default function AgentWorkers() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const q = useAgentWorkers();
+  const workers = q.data?.data ?? [];
   return (
     <ScrollView style={{ backgroundColor: t.bg }} contentContainerStyle={[s.body, { paddingTop: insets.top + 16 }]}
       refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor={t.brand} />}>
       <AppText variant="display">Mes travailleurs</AppText>
       {q.isLoading && <ActivityIndicator color={t.brand} style={{ marginTop: 30 }} />}
       {q.error && <ErrorBox message="Impossible de charger les travailleurs." />}
-      {!q.isLoading && !q.error && (q.data?.data.length
-        ? q.data.data.map((w) => (
+      {!q.isLoading && !q.error && (workers.length
+        ? workers.map((w) => (
           <Pressable key={w.id} accessibilityRole="button" accessibilityLabel={`Profil de ${w.nom}`} onPress={() => router.push(`/worker/${w.id}` as never)}>
             <Card>
               <View style={s.row}>
@@ -31,8 +32,8 @@ export default function AgentWorkers() {
                   : <View style={[s.avatar, s.fallback, { backgroundColor: t.soft }]}><Ionicons name="person-outline" size={22} color={t.brand} /></View>}
                 <View style={{ flex: 1, gap: 2 }}>
                   <AppText variant="heading" numberOfLines={1}>{w.nom}</AppText>
-                  <AppText muted numberOfLines={1}>{w.metiers.map((m) => m.libelle).join(', ') || 'Métier non renseigné'}</AppText>
-                  <AppText muted numberOfLines={1}>{w.zones.map((z) => z.nom).join(', ') || 'Zone non renseignée'}</AppText>
+                  <AppText muted numberOfLines={1}>{(w.metiers ?? []).map((m) => m.libelle).join(', ') || 'Métier non renseigné'}</AppText>
+                  <AppText muted numberOfLines={1}>{(w.zones ?? []).map((z) => z.nom).join(', ') || 'Zone non renseignée'}</AppText>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={t.muted} />
               </View>
