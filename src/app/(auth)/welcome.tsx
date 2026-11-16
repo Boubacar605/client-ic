@@ -63,20 +63,21 @@ export default function Welcome() {
                 /* Slide centrale (app mockup) : plein écran */
                 <Image
                   source={photo}
-                  style={[StyleSheet.absoluteFill, { opacity: 0.6 }]}
+                  style={[StyleSheet.absoluteFill, { opacity: 0.3 }]}
                   resizeMode="cover"
                 />
               ) : (
                 /* Slides avec personnes : pleine largeur */
-                <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.6 }]} resizeMode="cover" />
+                <Image source={photo} style={[StyleSheet.absoluteFill, { opacity: 0.3 }]} resizeMode="cover" />
               )
             ) : (
               <MaterialCommunityIcons name={sl.icon} size={300} color="rgba(255,255,255,0.16)" style={s.bgIcon} />
             )}
             {/* Overlay vert brand — masque le texte embedded, garde l'atmosphère */}
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: sl.couleur, opacity: 0.60 }]} />
+            {/* Color wash — brand green masque le texte marketing, les silhouettes restent */}
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: sl.couleur, opacity: 0.78 }]} />
             <LinearGradient
-              colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.75)']}
+              colors={['rgba(0,0,0,0.2)', 'transparent', 'rgba(0,0,0,0.80)']}
               locations={[0, 0.5, 1]}
               style={StyleSheet.absoluteFill}
             />
