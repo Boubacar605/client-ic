@@ -4,14 +4,13 @@ import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme/useTheme';
 import { AppText } from './AppText';
 
-export function ErrorBox({ message, code }: { message: string; code?: string }) {
+export function ErrorBox({ message }: { message: string }) {
   const t = useTheme();
   return (
-    <View style={[s.box, { backgroundColor: t.errorSoft }]}>
+    <View style={[s.box, { backgroundColor: t.errorSoft }]} accessibilityRole="alert">
       <Ionicons name="alert-circle" size={22} color={t.error} />
       <View style={{ flex: 1 }}>
         <AppText color={t.error} style={{ fontWeight: '700' }}>{message}</AppText>
-        {code ? <AppText variant="caption" color={t.error}>Code : {code}</AppText> : null}
       </View>
     </View>
   );

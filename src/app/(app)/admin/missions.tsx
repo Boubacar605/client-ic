@@ -15,6 +15,15 @@ import { ErrorBox } from '../../../ui/ErrorBox';
 
 const STATUTS = ['', 'BROUILLON', 'PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE', 'EN_COURS', 'TERMINEE', 'CLOTUREE', 'ANNULEE', 'SUSPENDUE'];
 const ACTIONS = ['PUBLIEE', 'SUSPENDUE', 'CLOTUREE', 'ANNULEE', 'TERMINEE'];
+// Transitions autorisées côté back-office (statut cible -> statuts de départ acceptés).
+const ALLOWED_FROM: Record<string, string[]> = {
+  PUBLIEE: ['BROUILLON'],
+  SUSPENDUE: ['PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE'],
+  CLOTUREE: ['PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE', 'EN_COURS'],
+  ANNULEE: ['BROUILLON', 'PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE', 'EN_COURS'],
+  TERMINEE: ['EN_COURS'],
+};
+const actionsFor = (statut: string) => ACTIONS.filter((a) => ALLOWED_FROM[a]?.includes(statut));
 
 export default function AdminMissions() {
   const t = useTheme();
@@ -66,14 +75,16 @@ export default function AdminMissions() {
           </Pressable>
           <Button label={openId === m.id ? 'Fermer' : 'Changer le statut'} variant="secondary" icon="swap-horizontal" onPress={() => setOpenId(openId === m.id ? null : m.id)} />
           {openId === m.id && (
-            <View style={s.filters}>
-              {ACTIONS.filter((a) => a !== m.statut).map((a) => (
-                <Pressable key={a} accessibilityRole="button" disabled={change.isPending} onPress={() => change.mutate({ id: m.id, value: a })}
-                  style={[s.chip, { borderColor: t.brand, backgroundColor: t.card }]}>
-                  <AppText variant="caption" color={t.brand}>{STATUT_MISSION[a] ?? a}</AppText>
-                </Pressable>
-              ))}
-            </View>
+            actionsFor(m.statut).length
+              ? <View style={s.filters}>
+                {actionsFor(m.statut).map((a) => (
+                  <Pressable key={a} accessibilityRole="button" disabled={change.isPending} onPress={() => change.mutate({ id: m.id, value: a })}
+                    style={[s.chip, { borderColor: t.brand, backgroundColor: t.card }]}>
+                    <AppText variant="caption" color={t.brand}>{STATUT_MISSION[a] ?? a}</AppText>
+                  </Pressable>
+                ))}
+              </View>
+              : <AppText variant="caption" muted>Aucune transition disponible pour ce statut.</AppText>
           )}
         </Card>
       ))}

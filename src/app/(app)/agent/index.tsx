@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAgentDashboard } from '../../../api/hooks';
 import { ApiError } from '../../../api/client';
@@ -11,6 +11,8 @@ import { AppText } from '../../../ui/AppText';
 import { Button } from '../../../ui/Button';
 import { Card } from '../../../ui/Card';
 import { ErrorBox } from '../../../ui/ErrorBox';
+import { ListRow } from '../../../ui/ListRow';
+import { SectionHeader } from '../../../ui/SectionHeader';
 import { StatGrid, StatItem } from '../../../ui/StatGrid';
 
 type AgentWorker = { id: string; nom: string; scoreFiabilite: number | null; createdAt: string };
@@ -31,6 +33,9 @@ export default function AgentDashboard() {
     { key: 'applications', label: 'Candidatures générées', value: ds.applicationsGenerated, icon: 'paper-plane-outline' },
     { key: 'confirmed', label: 'Confirmations reçues', value: ds.confirmationsReceived, icon: 'checkmark-done-outline' },
   ];
+  const scoreColor = (score: number | null) =>
+    score === null ? t.muted : score >= 70 ? t.green : score >= 40 ? t.amber : t.error;
+  const openMission = (id: string) => router.push({ pathname: '/mission/[id]', params: { id } });
   return (
     <ScrollView style={{ backgroundColor: t.bg }} contentContainerStyle={[s.body, { paddingTop: insets.top + 16 }]}
       refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => q.refetch()} tintColor={t.brand} />}>
@@ -40,58 +45,53 @@ export default function AgentDashboard() {
       </View>
       {q.isLoading ? <ActivityIndicator color={t.brand} /> : q.error ? <ErrorBox message={q.error instanceof ApiError ? q.error.title : 'Impossible de charger le tableau de bord.'} /> : (
         <>
-          <StatGrid items={stats} />
+          <View style={s.section}>
+            <SectionHeader title="Mon activité" caption="Votre impact sur le terrain." />
+            <StatGrid items={stats} />
+          </View>
+
           <View style={s.actions}>
             <View style={{ flex: 1 }}><Button label="Proposer une mission" icon="send-outline" onPress={() => router.navigate('/agent/proposal')} /></View>
             <View style={{ flex: 1 }}><Button label="Mes travailleurs" icon="people-outline" variant="secondary" onPress={() => router.navigate('/agent/workers')} /></View>
           </View>
-          <Button label="Historique WhatsApp" icon="logo-whatsapp" variant="ghost" onPress={() => router.push('/whatsapp' as never)} />
 
-          {workers.length > 0 && (
-            <View style={{ gap: 10 }}>
-              <AppText variant="heading">Derniers inscrits dans votre portefeuille</AppText>
-              {workers.slice(0, 5).map((w) => (
-                <Pressable key={w.id} accessibilityRole="button" accessibilityLabel={`Profil de ${w.nom}`} onPress={() => router.push(`/worker/${w.id}` as never)}>
-                  <Card style={{ padding: 14, gap: 4 }}>
-                    <View style={s.rowBetween}>
-                      <AppText variant="label" numberOfLines={1}>{w.nom}</AppText>
-                      <View style={s.rowBetween}>
-                        <AppText variant="caption" color={t.brand}>{w.scoreFiabilite !== null ? `${Math.round(w.scoreFiabilite)} %` : 'Nouveau'}</AppText>
-                        <Ionicons name="chevron-forward" size={18} color={t.muted} />
-                      </View>
-                    </View>
-                    <AppText variant="caption" muted>Inscrit le {fdate(w.createdAt.slice(0, 10))}</AppText>
-                  </Card>
-                </Pressable>
-              ))}
-            </View>
-          )}
+          <View style={s.section}>
+            <SectionHeader title="Mon portefeuille" count={workers.length} caption="Les derniers inscrits que vous accompagnez."
+              actionLabel="Voir tout" onAction={() => router.navigate('/agent/workers')} />
+            {workers.length === 0 ? (
+              <Card><AppText muted>Aucun travailleur dans votre portefeuille pour le moment. Partagez votre code de parrainage pour en recruter.</AppText></Card>
+            ) : workers.slice(0, 5).map((w) => (
+              <ListRow key={w.id} title={w.nom} icon="person-outline" subtitle={`Inscrit le ${fdate(w.createdAt.slice(0, 10))}`}
+                trailing={w.scoreFiabilite !== null ? `${Math.round(w.scoreFiabilite)} %` : 'Nouveau'}
+                trailingColor={scoreColor(w.scoreFiabilite)} onPress={() => router.push(`/worker/${w.id}` as never)} />
+            ))}
+          </View>
 
-          {activity.length > 0 && (
-            <View style={{ gap: 10 }}>
-              <AppText variant="heading">Activité récente</AppText>
-              {activity.slice(0, 6).map((a) => (
-                <Card key={a.id} style={{ padding: 14, gap: 4 }}>
-                  <View style={s.rowBetween}>
-                    <AppText variant="label" numberOfLines={1}>{a.workerName}</AppText>
-                    <AppText variant="caption" color={t.brand}>{STATUT_CANDIDATURE[a.statut] ?? a.statut}</AppText>
-                  </View>
-                  <AppText variant="caption" muted numberOfLines={1}>{a.mission}</AppText>
-                  <Button label="Voir la mission" variant="ghost" icon="chevron-forward" onPress={() => router.push({ pathname: '/mission/[id]', params: { id: a.missionId } })} />
-                </Card>
-              ))}
-            </View>
-          )}
+          <View style={s.section}>
+            <SectionHeader title="Activité récente" count={activity.length} caption="Les dernières demandes de vos travailleurs." />
+            {activity.length === 0 ? (
+              <Card><AppText muted>Aucune activité récente. Proposez une mission pour lancer votre première démarche.</AppText></Card>
+            ) : activity.slice(0, 6).map((a) => (
+              <ListRow key={a.id} title={a.workerName} subtitle={a.mission} icon="time-outline"
+                trailing={STATUT_CANDIDATURE[a.statut] ?? a.statut} onPress={() => openMission(a.missionId)} />
+            ))}
+          </View>
 
-          {!workers.length && !activity.length && <Card><AppText muted>Aucun travailleur dans votre portefeuille pour le moment. Partagez votre code de parrainage pour en recruter.</AppText></Card>}
+          <View style={s.section}>
+            <SectionHeader title="Outils" caption="Votre code de parrainage et vos communications." />
+            <ListRow title="Mon code de parrainage" subtitle="Partagez-le pour rattacher des travailleurs à votre portefeuille" icon="key-outline"
+              onPress={() => router.navigate('/agent/profil')} />
+            <ListRow title="Historique WhatsApp" subtitle="Messages envoyés à vos travailleurs" icon="logo-whatsapp"
+              onPress={() => router.push('/whatsapp' as never)} />
+          </View>
         </>
       )}
     </ScrollView>
   );
 }
 const s = StyleSheet.create({
-  body: { padding: 20, gap: 18, paddingBottom: 120, maxWidth: 900, width: '100%', alignSelf: 'center' },
+  body: { padding: 20, gap: 22, paddingBottom: 120, maxWidth: 900, width: '100%', alignSelf: 'center' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   actions: { flexDirection: 'row', gap: 10 },
-  rowBetween: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+  section: { gap: 12 },
 });

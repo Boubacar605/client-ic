@@ -53,11 +53,39 @@ export default function AgentProposal() {
   async function envoyerWhatsApp() {
     if (!missionId || !workerIds.length) return;
     setError(null); setNotice(null); setBusy('wa');
-    try {
-      const res = await sendWhatsapp({ kind: 'MISSION_PROPOSAL', missionId, workerIds });
-      const results: { status?: string }[] = Array.isArray(res?.results) ? res.results : [];
+    const report = (sent: number, skipped: number, failed: number) => {
+      setNotice(`WhatsApp : ${sent} message${sent > 1 ? 's' : ''} envoyé${sent > 1 ? 's' : ''} sur ${workerIds.length}${skipped ? ` · ${skipped} ignoré${skipped > 1 ? 's' : ''} (profil ou disponibilité incompatible)` : ''}${failed ? ` · ${failed} échec${failed > 1 ? 's' : ''}` : ''}.`);
+    };
+    const countStatuses = (results: { status?: string }[]) => {
       const sent = results.filter((r) => r.status === 'SENT').length;
-      setNotice(`WhatsApp : ${sent} message${sent > 1 ? 's' : ''} envoyé${sent > 1 ? 's' : ''} sur ${workerIds.length}.`);
+      const failed = results.filter((r) => r.status === 'FAILED').length;
+      return { sent, failed, skipped: results.length - sent - failed };
+    };
+    try {
+      try {
+        const res = await sendWhatsapp({ kind: 'MISSION_PROPOSAL', missionId, workerIds });
+        const results: { status?: string }[] = Array.isArray(res?.results) ? res.results : [];
+        const { sent, failed, skipped } = countStatuses(results);
+        report(sent, skipped, failed);
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'PREMIUM_REQUIRED') throw e;
+        // Le lot est refusé en bloc si un travailleur est incompatible : on réessaie un par un.
+        let sent = 0, skipped = 0, failed = 0;
+        for (const workerId of workerIds) {
+          try {
+            const res = await sendWhatsapp({ kind: 'MISSION_PROPOSAL', missionId, workerIds: [workerId] });
+            const status = Array.isArray(res?.results) ? res.results[0]?.status : undefined;
+            if (status === 'SENT') sent += 1;
+            else if (status === 'FAILED') failed += 1;
+            else skipped += 1;
+          } catch (inner) {
+            if (inner instanceof ApiError && inner.code === 'PREMIUM_REQUIRED') throw inner;
+            if (inner instanceof ApiError && (inner.status === 400 || inner.code === 'COMMISSION_PAYMENT_REQUIRED')) skipped += 1;
+            else failed += 1;
+          }
+        }
+        report(sent, skipped, failed);
+      }
       qc.invalidateQueries({ queryKey: ['whatsapp-history'] });
       qc.invalidateQueries({ queryKey: ['agent-dashboard'] });
     } catch (e) {
@@ -89,7 +117,7 @@ export default function AgentProposal() {
               <Ionicons name={active ? 'checkbox' : 'square-outline'} size={22} color={active ? t.brand : t.muted} />
               <View style={{ flex: 1 }}>
                 <AppText variant="label">{w.nom}</AppText>
-                <AppText variant="caption" muted numberOfLines={1}>{w.metiers.map((m) => m.libelle).join(', ') || 'Métier non renseigné'}</AppText>
+                <AppText variant="caption" muted numberOfLines={1}>{(w.metiers ?? []).map((m) => m.libelle).join(', ') || 'Métier non renseigné'}</AppText>
               </View>
               <AppText variant="caption" color={t.brand}>{w.scoreFiabilite !== null ? `${Math.round(w.scoreFiabilite)} %` : 'Nouveau'}</AppText>
             </Pressable>
@@ -118,7 +146,7 @@ export default function AgentProposal() {
         })}
       </Card>
 
-      {error ? <ErrorBox message={error.title} code={error.code} /> : null}
+      {error ? <ErrorBox message={error.title} /> : null}
       {notice ? <AppText color={t.brand} style={{ fontWeight: '700' }}>{notice}</AppText> : null}
       <Button label={`Proposer dans l’application (${workerIds.length})`} loading={busy === 'app'} disabled={!missionId || !workerIds.length || busy !== null} icon="send-outline" onPress={proposerDansApp} />
       <Button label={`Envoyer par WhatsApp (${workerIds.length})`} variant="secondary" loading={busy === 'wa'} disabled={!missionId || !workerIds.length || busy !== null} icon="logo-whatsapp" onPress={envoyerWhatsApp} />

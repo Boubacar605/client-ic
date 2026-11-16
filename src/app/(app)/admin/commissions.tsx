@@ -82,7 +82,7 @@ export default function AdminCommissions() {
 
           {openId === c.id && (
             <View style={{ gap: 8 }}>
-              <TextField label="Montant encaissé (FCFA)" keyboardType="number-pad" value={amount} onChangeText={(v) => setAmount(v.replace(/\D/g, ''))} />
+              <TextField label="Montant encaissé (FCFA)" placeholder="Ex. 5000" keyboardType="number-pad" value={amount} onChangeText={(v) => setAmount(v.replace(/\D/g, ''))} />
               <Button label="Enregistrer le paiement" icon="checkmark" loading={pay.isPending} disabled={!amount}
                 onPress={() => pay.mutate({ id: c.id, montant: Number(amount) })} />
             </View>

@@ -23,7 +23,8 @@ export default function ForgotPassword() {
   }
   return <AuthShell title="Mot de passe oublié ?" subtitle="Nous vous enverrons un lien de récupération sécurisé.">
     {sent ? <><AppText>Si un compte correspond à cette adresse, un e-mail de récupération a été envoyé.</AppText><Button label="Retour à la connexion" icon="arrow-back" onPress={() => router.replace('/login')} /></> :
-      <><TextField label="Adresse e-mail" icon="mail-outline" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} error={fieldError} />
-        {error ? <ErrorBox message={error.title} code={error.code} /> : null}<Button label="Envoyer le lien" icon="mail-outline" loading={loading} onPress={submit} /></>}
+      <><TextField label="Adresse e-mail" icon="mail-outline" keyboardType="email-address" autoCapitalize="none"
+        placeholder="nom@exemple.com" value={email} onChangeText={setEmail} error={fieldError} />
+        {error ? <ErrorBox message={error.title} /> : null}<Button label="Envoyer le lien" icon="mail-outline" loading={loading} onPress={submit} /></>}
   </AuthShell>;
 }

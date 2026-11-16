@@ -17,6 +17,7 @@ import { ErrorBox } from '../../../ui/ErrorBox';
 import { TextField } from '../../../ui/TextField';
 
 const NIVEAUX = ['REGION', 'DEPARTEMENT', 'COMMUNE', 'QUARTIER'];
+const NIVEAU_LABEL: Record<string, string> = { REGION: 'Région', DEPARTEMENT: 'Département', COMMUNE: 'Commune', QUARTIER: 'Quartier' };
 
 function RefDetail({ kind, id }: { kind: 'job' | 'zone'; id: string }) {
   const t = useTheme();
@@ -109,7 +110,7 @@ export default function Referentiels() {
           {NIVEAUX.map((n) => (
             <Pressable key={n} accessibilityRole="button" onPress={() => setNiveau(n)}
               style={[s.chip, { borderColor: niveau === n ? t.brand : t.line, backgroundColor: niveau === n ? t.soft : t.card }]}>
-              <AppText variant="caption" color={niveau === n ? t.brand : t.muted}>{n}</AppText>
+              <AppText variant="caption" color={niveau === n ? t.brand : t.muted}>{NIVEAU_LABEL[n] ?? n}</AppText>
             </Pressable>
           ))}
         </View>
@@ -137,7 +138,7 @@ export default function Referentiels() {
             <View style={s.itemRow}>
               <View style={{ flex: 1 }}>
                 <AppText variant="label" numberOfLines={1}>{z.nom}</AppText>
-                <AppText variant="caption" muted>{z.niveau}{z.parentId ? ' · rattachée' : ''}</AppText>
+                <AppText variant="caption" muted>{NIVEAU_LABEL[z.niveau] ?? z.niveau}{z.parentId ? ' · rattachée' : ''}</AppText>
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel={`Détail de ${z.nom}`} hitSlop={8} onPress={() => toggleDetail('zone', z.id)}>
                 <Ionicons name={detail?.kind === 'zone' && detail.id === z.id ? 'information-circle' : 'information-circle-outline'} size={22} color={t.muted} />
@@ -147,12 +148,12 @@ export default function Referentiels() {
             </View>
             {editZone?.id === z.id && (
               <View style={{ gap: 8 }}>
-                <TextField label="Nom" value={editZone.nom} onChangeText={(v) => setEditZone({ ...editZone, nom: v })} />
+                <TextField label="Nom" placeholder="Ex. Médina" value={editZone.nom} onChangeText={(v) => setEditZone({ ...editZone, nom: v })} />
                 <View style={s.filters}>
                   {NIVEAUX.map((n) => (
                     <Pressable key={n} accessibilityRole="button" onPress={() => setEditZone({ ...editZone, niveau: n })}
                       style={[s.chip, { borderColor: editZone.niveau === n ? t.brand : t.line, backgroundColor: editZone.niveau === n ? t.soft : t.card }]}>
-                      <AppText variant="caption" color={editZone.niveau === n ? t.brand : t.muted}>{n}</AppText>
+                      <AppText variant="caption" color={editZone.niveau === n ? t.brand : t.muted}>{NIVEAU_LABEL[n] ?? n}</AppText>
                     </Pressable>
                   ))}
                 </View>

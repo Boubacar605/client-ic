@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { login } from '../../api/auth';
 import { ApiError, fieldErrors } from '../../api/client';
-import type { Profil } from '../../api/types';
 import { useSession } from '../../auth/session';
 import { getBaseUrl, ADMIN_ROUTE_SECRET } from '../../config';
 import { emailOk } from '../../lib/validation';
@@ -15,37 +14,17 @@ import { Button } from '../../ui/Button';
 import { ErrorBox } from '../../ui/ErrorBox';
 import { TextField } from '../../ui/TextField';
 
-const DEMO_COMPTES: { role: Profil['role']; label: string; icon: string; profil: Profil }[] = [
-  {
-    role: 'TRAVAILLEUR',
-    label: 'Travailleur',
-    icon: 'construct-outline',
-    profil: { id: 'demo-t', email: 'demo.travailleur@xeuysil.sn', role: 'TRAVAILLEUR', statut: 'ACTIF', nom: 'Amadou Demo', telephone: '+221771234567' },
-  },
-  {
-    role: 'RECRUTEUR',
-    label: 'Recruteur',
-    icon: 'business-outline',
-    profil: { id: 'demo-r', email: 'demo.recruteur@xeuysil.sn', role: 'RECRUTEUR', statut: 'ACTIF', nom: 'Fatou Demo', telephone: '+221772345678', raisonSociale: 'Demo SARL', typeRecruteur: 'PARTICULIER' },
-  },
-  {
-    role: 'AGENT',
-    label: 'Agent',
-    icon: 'people-outline',
-    profil: { id: 'demo-a', email: 'demo.agent@xeuysil.sn', role: 'AGENT', statut: 'ACTIF', nom: 'Moussa Demo', telephone: '+221773456789' },
-  },
-  {
-    role: 'ADMINISTRATEUR',
-    label: 'Admin',
-    icon: 'shield-outline',
-    profil: { id: 'demo-ad', email: 'demo.admin@xeuysil.sn', role: 'ADMINISTRATEUR', statut: 'ACTIF', nom: 'Admin Demo', telephone: '+221774567890' },
-  },
+const DEMO_COMPTES: { role: string; label: string; icon: string }[] = [
+  { role: 'TRAVAILLEUR',    label: 'Travailleur', icon: 'construct-outline' },
+  { role: 'RECRUTEUR',      label: 'Recruteur',   icon: 'business-outline' },
+  { role: 'AGENT',          label: 'Agent',       icon: 'people-outline' },
+  { role: 'ADMINISTRATEUR', label: 'Admin',       icon: 'shield-outline' },
 ];
 
 export default function Login() {
   const t = useTheme();
   const router = useRouter();
-  const { signIn, signInDemo } = useSession();
+  const { signIn } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
@@ -69,8 +48,14 @@ export default function Login() {
 
   async function connecterDemo(item: typeof DEMO_COMPTES[0]) {
     setDemoLoading(item.role);
-    try { await signInDemo(item.profil); }
-    finally { setDemoLoading(null); }
+    try {
+      const result = await login(`demo.${item.role.toLowerCase()}@xeuysil.sn`, '', item.role);
+      await signIn(result);
+    } catch (err) {
+      setError(err as ApiError);
+    } finally {
+      setDemoLoading(null);
+    }
   }
 
   return (

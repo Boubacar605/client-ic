@@ -47,8 +47,8 @@ export default function AdminSettings() {
       {settings.data && (
         <Card>
           <View style={s.row}><Ionicons name="percent-outline" size={22} color={t.brand} /><AppText variant="heading">Commission</AppText></View>
-          <TextField label="Pourcentage de commission" keyboardType="numeric" value={percent} onChangeText={(v) => setPercent(v.replace(/[^0-9.]/g, ''))} hint="Entre 0 et 100 %" />
-          <TextField label="Dette maximale autorisée (FCFA)" keyboardType="number-pad" value={maxDebt} onChangeText={(v) => setMaxDebt(v.replace(/\D/g, ''))} />
+          <TextField label="Pourcentage de commission" placeholder="Ex. 10" keyboardType="numeric" value={percent} onChangeText={(v) => setPercent(v.replace(/[^0-9.]/g, ''))} hint="Entre 0 et 100 %" />
+          <TextField label="Dette maximale autorisée (FCFA)" placeholder="Ex. 50000" keyboardType="number-pad" value={maxDebt} onChangeText={(v) => setMaxDebt(v.replace(/\D/g, ''))} />
           <Button label="Enregistrer les réglages" icon="checkmark" loading={save.isPending} onPress={() => save.mutate()} />
           {save.isSuccess ? <AppText color={t.brand} style={{ fontWeight: '700' }}>Réglages enregistrés.</AppText> : null}
         </Card>

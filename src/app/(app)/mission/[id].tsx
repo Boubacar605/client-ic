@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apply, confirmCandidature, rejectCandidature, selectCandidature, withdrawCandidature } from '../../../api/candidatures';
+import { apply, confirmCandidature, interestCandidature, rejectCandidature, selectCandidature, withdrawCandidature } from '../../../api/candidatures';
 import { ApiError } from '../../../api/client';
 import { useCandidatures, useCandidature, useMission } from '../../../api/hooks';
 import { cancelMission, closeMission, completeMission, deleteMission, publishMission, startMission, updateMission } from '../../../api/missions';
@@ -32,8 +32,9 @@ export default function MissionDetail() {
   const insets = useSafeAreaInsets();
   const { profil } = useSession();
   const worker = profil?.role === 'TRAVAILLEUR';
-  const canManage = profil?.role === 'RECRUTEUR';
   const mq = useMission(id);
+  const canManage = profil?.role === 'RECRUTEUR'
+    && (!mq.data || !mq.data.recruteurId || mq.data.recruteurId === profil?.id);
   const cq = useCandidatures(id, worker || canManage);
   const act = useAct();
   const [askCancel, setAskCancel] = useState(false);
@@ -47,6 +48,7 @@ export default function MissionDetail() {
   const [date, setDate] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const m = mq.data;
   useEffect(() => {
@@ -97,13 +99,20 @@ export default function MissionDetail() {
           </Card>
         )}
 
-        {act.error && <ErrorBox message={act.error.title} code={act.error.code} />}
+        {act.error && <ErrorBox message={act.error.title} />}
+        {notice && <AppText color={t.brand} style={{ fontWeight: '700' }}>{notice}</AppText>}
 
         {m && worker && (
           mine ? (
             <Card>
               <AppText variant="heading">Votre demande</AppText>
               <StatusChip statut={mine.statut} />
+              {mine.statut === 'PROPOSEE' && (
+                <>
+                  <AppText muted>Un agent vous propose cette mission. Dites-nous si elle vous intéresse.</AppText>
+                  <Button label="Je suis intéressé" icon="hand-left-outline" large loading={act.busy === 'int'} onPress={() => act.run('int', () => interestCandidature(mine.id))} />
+                </>
+              )}
               {mine.statut === 'INTERESSE' && <AppText muted>Le recruteur choisit parmi les candidats. Vous serez prévenu s’il vous retient.</AppText>}
               {mine.statut === 'SELECTIONNEE' && (
                 <>
@@ -112,13 +121,22 @@ export default function MissionDetail() {
                 </>
               )}
               {mine.statut === 'CONFIRMEE' && <AppText muted>C’est confirmé. Présentez-vous le jour prévu.</AppText>}
-              {['INTERESSE', 'SELECTIONNEE', 'CONFIRMEE'].includes(mine.statut) && (askDes
-                ? <Button label="Oui, je me retire" variant="secondary" loading={act.busy === 'des'} onPress={() => act.run('des', () => withdrawCandidature(mine.id))} />
-                : <Button label={mine.statut === 'CONFIRMEE' ? 'Je ne peux plus venir' : 'Retirer ma candidature'} variant="ghost" onPress={() => setAskDes(true)} />)}
+              {['PROPOSEE', 'INTERESSE', 'SELECTIONNEE', 'CONFIRMEE'].includes(mine.statut) && (askDes
+                ? <Button label="Oui, je me retire" variant="secondary" loading={act.busy === 'des'} onPress={() => act.run('des', async () => { await withdrawCandidature(mine.id); setAskDes(false); })} />
+                : <Button label={mine.statut === 'CONFIRMEE' ? 'Je ne peux plus venir' : mine.statut === 'PROPOSEE' ? 'Refuser la proposition' : 'Retirer ma candidature'} variant="ghost" onPress={() => setAskDes(true)} />)}
+              {['RETIREE', 'REFUSEE'].includes(mine.statut) && (
+                <AppText muted>
+                  {mine.statut === 'RETIREE' ? 'Vous vous êtes retiré de cette mission.' : 'Votre candidature n’a pas été retenue.'}
+                  {mine.statut === 'RETIREE' && OUVERTE.includes(m.statut) ? ' La mission accepte encore des candidatures : vous pouvez postuler de nouveau.' : ''}
+                </AppText>
+              )}
+              {mine.statut === 'RETIREE' && OUVERTE.includes(m.statut) && (
+                <Button label="Postuler à nouveau" icon="paper-plane" loading={act.busy === 'apply'} onPress={() => act.run('apply', () => apply(m.id))} />
+              )}
             </Card>
           ) : (
             <Button label={OUVERTE.includes(m.statut) ? 'Je postule' : 'Mission fermée'} icon="paper-plane" large disabled={!OUVERTE.includes(m.statut)}
-              loading={act.busy === 'apply'} onPress={() => act.run('apply', () => apply(m.id, profil!))} />
+              loading={act.busy === 'apply'} onPress={() => act.run('apply', () => apply(m.id))} />
           )
         )}
 
@@ -144,7 +162,8 @@ export default function MissionDetail() {
                     </View>
                   </View>
                   {c.statut === 'CONFIRMEE' && c.telephone ? <View style={s.row}><Ionicons name="call-outline" size={18} color={t.muted} /><AppText variant="label">{c.telephone}</AppText></View> : null}
-                  {c.statut === 'INTERESSE' && (
+                  {c.statut === 'PROPOSEE' && <AppText variant="caption" muted>Proposé par un agent, en attente de sa réponse.</AppText>}
+                  {['PROPOSEE', 'INTERESSE'].includes(c.statut) && (
                     <View style={s.row}>
                       <View style={{ flex: 1 }}><Button label="Retenir" icon="checkmark" loading={act.busy === `s${c.id}`} onPress={() => act.run(`s${c.id}`, () => selectCandidature(c.id))} /></View>
                       <View style={{ flex: 1 }}><Button label="Refuser" variant="secondary" loading={act.busy === `r${c.id}`} onPress={() => act.run(`r${c.id}`, () => rejectCandidature(c.id))} /></View>
@@ -160,71 +179,90 @@ export default function MissionDetail() {
             })}
 
             {m.statut === 'BROUILLON' && <Button label="Publier la mission" icon="paper-plane" large loading={act.busy === 'pub'} onPress={() => act.run('pub', () => publishMission(m.id))} />}
-            {m.statut === 'POURVUE' && <Button label="Démarrer la mission" icon="play" large loading={act.busy === 'start'} onPress={() => act.run('start', () => startMission(m.id))} />}
+            {['POURVUE', 'PARTIELLEMENT_POURVUE'].includes(m.statut) && <Button label="Démarrer la mission" icon="play" large loading={act.busy === 'start'} onPress={() => act.run('start', () => startMission(m.id))} />}
             {m.statut === 'EN_COURS' && <Button label="Terminer la mission" icon="flag" large loading={act.busy === 'done'} onPress={() => act.run('done', () => completeMission(m.id))} />}
-            {confirmed > 0 && !['TERMINEE', 'CLOTUREE', 'ANNULEE'].includes(m.statut) && <Button label="Clôturer la mission" icon="flag" variant="secondary" large loading={act.busy === 'close'} onPress={() => act.run('close', () => closeMission(m.id))} />}
-            {!['TERMINEE', 'CLOTUREE', 'ANNULEE'].includes(m.statut) && (askCancel
+            {confirmed > 0 && ['PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE'].includes(m.statut) && <Button label="Clôturer la mission" icon="flag" variant="secondary" large loading={act.busy === 'close'} onPress={() => act.run('close', () => closeMission(m.id))} />}
+            {['BROUILLON', 'PUBLIEE', 'PARTIELLEMENT_POURVUE', 'POURVUE'].includes(m.statut) && (askCancel
               ? <Button label="Oui, annuler la mission" variant="secondary" loading={act.busy === 'cancel'} onPress={() => act.run('cancel', () => cancelMission(m.id))} />
               : <Button label="Annuler la mission" variant="ghost" onPress={() => setAskCancel(true)} />)}
 
-            <Card>
-              <View style={s.titleRow}>
-                <AppText variant="heading">Modifier la mission</AppText>
-                <Button label={editing ? 'Fermer' : 'Modifier'} variant="ghost" icon="create-outline" onPress={() => setEditing(!editing)} />
-              </View>
-              {editing && (
-                <>
-                  <TextField label="Lieu exact" icon="pin-outline" value={lieu} onChangeText={setLieu} />
-                  <TextField label="Description" icon="document-text-outline" value={description} onChangeText={setDescription} />
-                  <TextField label="Rémunération (FCFA)" icon="cash-outline" keyboardType="number-pad" value={remuneration} onChangeText={(v) => setRemuneration(v.replace(/\D/g, ''))} />
-                  <TextField label="Nombre de postes" icon="people-outline" keyboardType="number-pad" value={postes} onChangeText={(v) => setPostes(v.replace(/\D/g, ''))} />
-                  <TextField label="Date (AAAA-MM-JJ)" icon="calendar-outline" value={date} onChangeText={setDate} />
-                  <Button label="Enregistrer les modifications" icon="checkmark" loading={act.busy === 'edit'} disabled={!date || !remuneration || !postes}
-                    onPress={() => act.run('edit', async () => {
-                      await updateMission(m.id, {
-                        lieu: lieu.trim() || null,
-                        description: description.trim() || undefined,
-                        remunerationFcfa: Number(remuneration),
-                        nombrePostes: Number(postes),
-                        dateMission: date,
-                      });
-                      setEditing(false);
-                    })} />
-                </>
-              )}
-            </Card>
+            {!['TERMINEE', 'CLOTUREE', 'ANNULEE'].includes(m.statut) && (
+              <Card>
+                <View style={s.titleRow}>
+                  <AppText variant="heading">Modifier la mission</AppText>
+                  <Button label={editing ? 'Fermer' : 'Modifier'} variant="ghost" icon="create-outline" onPress={() => setEditing(!editing)} />
+                </View>
+                {editing && (
+                  <>
+                    <TextField label="Lieu exact" icon="pin-outline" placeholder="Ex. Rue 12, Médina" value={lieu} onChangeText={setLieu} />
+                    <TextField label="Description" icon="document-text-outline" placeholder="Ex. 2 serveurs pour un événement" value={description} onChangeText={setDescription} />
+                    <TextField label="Rémunération (FCFA)" icon="cash-outline" placeholder="Ex. 15000" keyboardType="number-pad" value={remuneration} onChangeText={(v) => setRemuneration(v.replace(/\D/g, ''))} />
+                    <TextField label="Nombre de postes" icon="people-outline" placeholder="Ex. 3" keyboardType="number-pad" value={postes} onChangeText={(v) => setPostes(v.replace(/\D/g, ''))} />
+                    <TextField label="Date (AAAA-MM-JJ)" icon="calendar-outline" placeholder="Ex. 2026-12-01" value={date} onChangeText={setDate} />
+                    <Button label="Enregistrer les modifications" icon="checkmark" loading={act.busy === 'edit'} disabled={!date || !remuneration || !postes}
+                      onPress={() => act.run('edit', async () => {
+                        await updateMission(m.id, {
+                          lieu: lieu.trim() || null,
+                          description: description.trim() || undefined,
+                          remunerationFcfa: Number(remuneration),
+                          nombrePostes: Number(postes),
+                          dateMission: date,
+                        });
+                        setEditing(false);
+                      })} />
+                  </>
+                )}
+              </Card>
+            )}
 
-            <Card>
-              <View style={s.row}><Ionicons name="megaphone-outline" size={22} color={t.brand} /><AppText variant="heading">Diffuser la mission</AppText></View>
-              <AppText muted>Sélectionnez jusqu’à 15 candidats de cette mission pour leur envoyer une proposition.</AppText>
-              <View style={s.chips}>
-                {cands.filter((c) => c.travailleurId).map((c) => {
-                  const nom = c.travailleurNom ?? c.travailleurId.slice(0, 6);
-                  const on = selected.includes(c.travailleurId);
-                  return (
-                    <Pressable key={c.id} accessibilityRole="button" accessibilityState={{ selected: on }}
-                      onPress={() => setSelected(on ? selected.filter((id) => id !== c.travailleurId) : selected.length < 15 ? [...selected, c.travailleurId] : selected)}
-                      style={[s.tag, { borderWidth: 1, borderColor: on ? t.brand : t.line, backgroundColor: on ? t.soft : t.card }]}>
-                      <AppText variant="caption" color={on ? t.brand : t.muted}>{nom}</AppText>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <Button label={`Diffuser dans l’application (${selected.length})`} icon="notifications-outline" disabled={!selected.length} loading={act.busy === 'bc'}
-                onPress={() => act.run('bc', () => broadcastMission(m.id, selected))} />
-              <Button label={`Envoyer par WhatsApp (${selected.length})`} icon="logo-whatsapp" variant="secondary" disabled={!selected.length} loading={act.busy === 'bwa'}
-                onPress={() => act.run('bwa', () => sendWhatsapp({ kind: 'MISSION_PROPOSAL', missionId: m.id, workerIds: selected }))} />
-              <Button label="Historique WhatsApp" variant="ghost" icon="time-outline" onPress={() => router.push('/whatsapp' as never)} />
-            </Card>
+            {OUVERTE.includes(m.statut) && (
+              <Card>
+                <View style={s.row}><Ionicons name="megaphone-outline" size={22} color={t.brand} /><AppText variant="heading">Diffuser la mission</AppText></View>
+                <AppText muted>Sélectionnez jusqu’à 15 candidats de cette mission pour leur envoyer une proposition.</AppText>
+                <View style={s.chips}>
+                  {cands.filter((c) => c.travailleurId && c.statut !== 'REFUSEE').map((c) => {
+                    const nom = c.travailleurNom ?? c.travailleurId.slice(0, 6);
+                    const on = selected.includes(c.travailleurId);
+                    return (
+                      <Pressable key={c.id} accessibilityRole="button" accessibilityState={{ selected: on }}
+                        onPress={() => setSelected(on ? selected.filter((id) => id !== c.travailleurId) : selected.length < 15 ? [...selected, c.travailleurId] : selected)}
+                        style={[s.tag, { borderWidth: 1, borderColor: on ? t.brand : t.line, backgroundColor: on ? t.soft : t.card }]}>
+                        <AppText variant="caption" color={on ? t.brand : t.muted}>{nom}</AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Button label={`Diffuser dans l’application (${selected.length})`} icon="notifications-outline" disabled={!selected.length} loading={act.busy === 'bc'}
+                  onPress={() => act.run('bc', async () => {
+                    setNotice(null);
+                    const res = await broadcastMission(m.id, selected);
+                    const skipped: string[] = Array.isArray(res?.skippedWorkerIds) ? res.skippedWorkerIds : [];
+                    setNotice(`Diffusion envoyée à ${res?.workersNotified ?? selected.length} travailleur(s)${skipped.length ? ` · ${skipped.length} ignoré(s) : profil, disponibilité ou commission` : ''}.`);
+                  })} />
+                <Button label={`Envoyer par WhatsApp (${selected.length})`} icon="logo-whatsapp" variant="secondary" disabled={!selected.length} loading={act.busy === 'bwa'}
+                  onPress={() => act.run('bwa', async () => {
+                    setNotice(null);
+                    const res = await sendWhatsapp({ kind: 'MISSION_PROPOSAL', missionId: m.id, workerIds: selected });
+                    const results: { status?: string }[] = Array.isArray(res?.results) ? res.results : [];
+                    const sent = results.filter((r) => r.status === 'SENT').length;
+                    const failed = results.filter((r) => r.status === 'FAILED').length;
+                    const skipped = results.length - sent - failed;
+                    setNotice(`WhatsApp : ${sent} message(s) envoyé(s) sur ${results.length}${skipped ? ` · ${skipped} ignoré(s)` : ''}${failed ? ` · ${failed} échec(s)` : ''}.`);
+                  })} />
+                <Button label="Historique WhatsApp" variant="ghost" icon="time-outline" onPress={() => router.push('/whatsapp' as never)} />
+              </Card>
+            )}
 
-            <Card>
-              <AppText variant="heading">Supprimer la mission</AppText>
-              <AppText muted>La mission sera retirée de la plateforme. Cette action est définitive.</AppText>
-              {askDelete
-                ? <Button label="Oui, supprimer définitivement" variant="secondary" loading={act.busy === 'del'}
-                    onPress={() => act.run('del', async () => { await deleteMission(m.id); router.back(); })} />
-                : <Button label="Supprimer la mission" variant="ghost" onPress={() => setAskDelete(true)} />}
-            </Card>
+            {confirmed === 0 && (
+              <Card>
+                <AppText variant="heading">Supprimer la mission</AppText>
+                <AppText muted>La mission sera retirée de la plateforme. Cette action est définitive.</AppText>
+                {askDelete
+                  ? <Button label="Oui, supprimer définitivement" variant="secondary" loading={act.busy === 'del'}
+                      onPress={() => act.run('del', async () => { await deleteMission(m.id); router.back(); })} />
+                  : <Button label="Supprimer la mission" variant="ghost" onPress={() => setAskDelete(true)} />}
+              </Card>
+            )}
           </>
         )}
       </ScrollView>

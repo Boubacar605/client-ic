@@ -24,7 +24,13 @@ export function MissionCard({ mission, onPress }: { mission: Mission; onPress: (
         <View style={s.row}><Ionicons name="calendar-outline" size={16} color={t.muted} /><AppText variant="caption" muted>{fdate(mission.date)}, {HORAIRE[mission.typeHoraire]}</AppText></View>
         <View style={[s.row, { justifyContent: 'space-between' }]}>
           <AppText variant="label" color={t.brand}>{fcfa(mission.remunerationFcfa)}</AppText>
-          <View style={[s.tag, { backgroundColor: t.soft }]}><AppText variant="caption" color={t.brand} style={{ fontWeight: '700' }}>{STATUT_MISSION[mission.statut] ?? mission.statut}</AppText></View>
+          <View style={[s.tag, { backgroundColor: t.soft }]}>
+            <AppText variant="caption" color={t.brand} style={{ fontWeight: '700' }}>
+              {['PUBLIEE', 'PARTIELLEMENT_POURVUE'].includes(mission.statut) && typeof mission.postesRestants === 'number'
+                ? `${mission.postesRestants} place${mission.postesRestants > 1 ? 's' : ''}`
+                : STATUT_MISSION[mission.statut] ?? mission.statut}
+            </AppText>
+          </View>
         </View>
       </View>
     </Pressable>

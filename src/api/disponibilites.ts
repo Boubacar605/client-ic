@@ -1,6 +1,5 @@
 import { api, unwrap } from './client';
 import { asList } from '../lib/normalize';
-import type { Profil } from './types';
 
 export type Periode = 'JOURNEE' | 'MATIN' | 'APRES_MIDI' | 'CRENEAU';
 export interface Disponibilite { id: string; date: string; periode: Periode; heureDebut?: string | null; heureFin?: string | null }
@@ -11,8 +10,11 @@ export async function listDisponibilites(): Promise<Disponibilite[]> {
     heureDebut: r.heureDebut ?? null, heureFin: r.heureFin ?? null,
   }));
 }
-export const addDisponibilite = (date: string, periode: Periode, profil: Profil) =>
-  api.post('/availability', { dateDisponibilite: date, periode }).then(unwrap);
+export const addDisponibilite = (
+  date: string,
+  periode: Periode,
+  horaires?: { heureDebut?: string | null; heureFin?: string | null },
+) => api.post('/availability', { dateDisponibilite: date, periode, ...horaires }).then(unwrap);
 export const getDisponibilite = (id: string) => api.get(`/availability/${id}`).then((r) => unwrap<any>(r));
 export const updateDisponibilite = (id: string, body: Partial<{ dateDisponibilite: string; periode: Periode; heureDebut: string | null; heureFin: string | null }>) =>
   api.patch(`/availability/${id}`, body).then((r) => unwrap<any>(r));

@@ -43,7 +43,7 @@ export default function CheckEmail() {
         </AppText>
       </View>
       {sent && <AppText color={t.brand} style={{ textAlign: 'center', fontWeight: '700' }}>Nouvel e-mail envoyé.</AppText>}
-      {error && <ErrorBox message={error.title} code={error.code} />}
+      {error && <ErrorBox message={error.title} />}
       {email ? <Button label="Renvoyer l’e-mail" icon="refresh" variant="secondary" loading={loading} onPress={resend} /> : null}
       <Pressable accessibilityRole="link" onPress={() => router.replace('/login')} style={{ alignItems: 'center', padding: 6 }}>
         <AppText color={t.brand}>J’ai confirmé, je me connecte</AppText>
