@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { login } from '../../api/auth';
 import { ApiError, fieldErrors } from '../../api/client';
@@ -10,253 +10,192 @@ import { useSession } from '../../auth/session';
 import { getBaseUrl, ADMIN_ROUTE_SECRET } from '../../config';
 import { emailOk } from '../../lib/validation';
 import { AppText } from '../../ui/AppText';
-import { AuthShell } from '../../ui/AuthShell';
-import { Button } from '../../ui/Button';
 import { ErrorBox } from '../../ui/ErrorBox';
 import { TextField } from '../../ui/TextField';
 
 const HERO = require('../../../assets/images/hero-1.jpeg');
 const LOGO = require('../../../assets/images/logo-xeuysil.jpeg');
 
-const DEMO_COMPTES: { role: string; label: string; icon: string; color: string }[] = [
-  { role: 'TRAVAILLEUR',    label: 'Travailleur', icon: 'construct-outline',  color: '#ffffff' },
-  { role: 'RECRUTEUR',      label: 'Recruteur',   icon: 'business-outline',   color: '#ffffff' },
-  { role: 'AGENT',          label: 'Agent',       icon: 'people-outline',     color: '#ffffff' },
-  { role: 'ADMINISTRATEUR', label: 'Admin',       icon: 'shield-outline',     color: '#f2b705' },
-];
+const DEMO_COMPTES = [
+  { role: 'TRAVAILLEUR',    label: 'Travailleur', icon: 'construct-outline' },
+  { role: 'RECRUTEUR',      label: 'Recruteur',   icon: 'business-outline'  },
+  { role: 'AGENT',          label: 'Agent',       icon: 'people-outline'    },
+  { role: 'ADMINISTRATEUR', label: 'Admin',       icon: 'shield-outline'    },
+] as const;
 
 export default function Login() {
-  const router   = useRouter();
-  const insets   = useSafeAreaInsets();
+  const router  = useRouter();
+  const insets  = useSafeAreaInsets();
   const { signIn } = useSession();
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
-  const [show, setShow]             = useState(false);
-  const [loading, setLoading]       = useState(false);
+
+  const [email,       setEmail]       = useState('');
+  const [password,    setPassword]    = useState('');
+  const [show,        setShow]        = useState(false);
+  const [loading,     setLoading]     = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
-  const [error, setError]           = useState<ApiError | null>(null);
-  const [fe, setFe]                 = useState<Record<string, string>>({});
+  const [error,       setError]       = useState<ApiError | null>(null);
+  const [fe,          setFe]          = useState<Record<string, string>>({});
 
   async function submit() {
     setError(null);
     const e: Record<string, string> = {};
-    if (!emailOk(email)) e.email = 'Entrez une adresse e-mail valide.';
-    if (!password) e.password = 'Entrez votre mot de passe.';
+    if (!emailOk(email)) e.email = 'Adresse e-mail invalide.';
+    if (!password)       e.password = 'Mot de passe requis.';
     setFe(e);
     if (Object.keys(e).length) return;
     setLoading(true);
-    try { await signIn(await login(email, password)); }
+    try   { await signIn(await login(email, password)); }
     catch (err) { setError(err as ApiError); setFe(fieldErrors(err)); }
-    finally { setLoading(false); }
+    finally     { setLoading(false); }
   }
 
-  async function connecterDemo(item: typeof DEMO_COMPTES[0]) {
-    setDemoLoading(item.role);
+  async function connecterDemo(role: string) {
+    setDemoLoading(role);
     try {
-      const result = await login(`demo.${item.role.toLowerCase()}@xeuysil.sn`, '', item.role);
+      const result = await login(`demo.${role.toLowerCase()}@xeuysil.sn`, '', role);
       await signIn(result);
     } catch (err) { setError(err as ApiError); }
-    finally { setDemoLoading(null); }
+    finally       { setDemoLoading(null); }
   }
 
-  // ── Mise en page web split-screen ──────────────────────────────────────────
+  // Formulaire partagé
+  const FormContent = (
+    <>
+      <View style={f.logoRow}>
+        <Image source={LOGO} style={f.logoImg} />
+        <View>
+          <AppText style={f.appName}>XeuySil</AppText>
+          <AppText style={f.tagline}>Travaillez · Trouvez · Avancez</AppText>
+        </View>
+      </View>
+      <AppText style={f.heading}>Bon retour !</AppText>
+      <AppText style={f.sub}>Connectez-vous pour retrouver vos missions.</AppText>
+      <View style={f.fields}>
+        <TextField label="Adresse e-mail" icon="mail-outline" keyboardType="email-address"
+          autoCapitalize="none" autoCorrect={false} placeholder="nom@exemple.com"
+          value={email} onChangeText={setEmail} error={fe.email} />
+        <TextField label="Mot de passe" icon="lock-closed-outline" secureTextEntry={!show}
+          autoCapitalize="none" value={password} onChangeText={setPassword} error={fe.password}
+          right={
+            <Pressable onPress={() => setShow(!show)} accessibilityRole="button">
+              <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={22} color="#5a7260" />
+            </Pressable>
+          } />
+        <Pressable onPress={() => router.push('/forgot-password')} style={{ alignSelf: 'flex-end' }}>
+          <AppText style={f.forgot}>Mot de passe oublié ?</AppText>
+        </Pressable>
+      </View>
+      {error && <ErrorBox message={error.title} code={error.code} />}
+      <Pressable style={[f.loginBtn, loading && { opacity: 0.7 }]} onPress={submit}
+        disabled={loading} accessibilityRole="button">
+        <AppText style={f.loginBtnText}>{loading ? 'Connexion...' : 'Se connecter'}</AppText>
+        {!loading && <Ionicons name="arrow-forward" size={20} color="#ffffff" />}
+      </Pressable>
+      <View style={f.sep}>
+        <View style={f.sepLine} /><AppText style={f.sepTxt}>Accès démo</AppText><View style={f.sepLine} />
+      </View>
+      <View style={f.demoGrid}>
+        {DEMO_COMPTES.map((item) => (
+          <Pressable key={item.role} style={f.demoBtn}
+            onPress={() => connecterDemo(item.role)} disabled={demoLoading !== null} accessibilityRole="button">
+            <Ionicons name={item.icon} size={18} color="#1a6b2a" />
+            <AppText style={f.demoBtnTxt}>{demoLoading === item.role ? '...' : item.label}</AppText>
+          </Pressable>
+        ))}
+      </View>
+      <View style={f.signupRow}>
+        <AppText style={f.signupTxt}>Pas encore de compte ?</AppText>
+        <Pressable onPress={() => router.push('/register')}>
+          <AppText style={f.signupLink}> Créer un compte</AppText>
+        </Pressable>
+      </View>
+      <Pressable onPress={() => router.push('/debug')}
+        onLongPress={() => { if (ADMIN_ROUTE_SECRET) router.push(`/acces/${ADMIN_ROUTE_SECRET}` as never); }}
+        style={{ marginTop: 8, alignItems: 'center' }}>
+        <AppText style={f.serverTxt}>{getBaseUrl().replace(/^https?:\/\//, '') || 'serveur non défini'}</AppText>
+      </Pressable>
+    </>
+  );
+
+  // WEB : image gauche | formulaire droit
   if (Platform.OS === 'web') {
     return (
-      <View style={sw.root}>
-        {/* Panneau gauche — vert avec formulaire */}
-        <LinearGradient
-          colors={['#1a6b2a', '#0f4d1e']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={sw.left}
-        >
-          <ScrollView
-            contentContainerStyle={[sw.leftScroll, { paddingTop: insets.top + 24 }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Logo */}
-            <View style={sw.logoRow}>
-              <Image source={LOGO} style={sw.logoImg} />
-              <View>
-                <AppText style={sw.logoName}>XeuySil</AppText>
-                <AppText style={sw.logoTagline}>Travaillez · Trouvez · Avancez</AppText>
-              </View>
-            </View>
-
-            <AppText style={sw.heading}>Bon retour !</AppText>
-            <AppText style={sw.sub}>Connectez-vous pour retrouver vos missions.</AppText>
-
-            {/* Formulaire */}
-            <View style={sw.form}>
-              <TextField
-                label="Adresse e-mail" icon="mail-outline"
-                keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
-                placeholder="nom@exemple.com" value={email} onChangeText={setEmail}
-                error={fe.email}
-              />
-              <TextField
-                label="Mot de passe" icon="lock-closed-outline"
-                secureTextEntry={!show} autoCapitalize="none"
-                value={password} onChangeText={setPassword} error={fe.password}
-                right={
-                  <Pressable onPress={() => setShow(!show)} accessibilityRole="button">
-                    <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={22} color="rgba(255,255,255,0.7)" />
-                  </Pressable>
-                }
-              />
-              <Pressable onPress={() => router.push('/forgot-password')} style={{ alignSelf: 'flex-end' }}>
-                <AppText style={sw.forgotLink}>Mot de passe oublié ?</AppText>
-              </Pressable>
-              {error && <ErrorBox message={error.title} code={error.code} />}
-              <Pressable style={sw.loginBtn} onPress={submit} disabled={loading} accessibilityRole="button">
-                <AppText style={sw.loginBtnText}>{loading ? 'Connexion...' : 'Se connecter'}</AppText>
-                {!loading && <Ionicons name="arrow-forward" size={20} color="#1a6b2a" />}
-              </Pressable>
-            </View>
-
-            {/* Séparateur démo */}
-            <View style={sw.sep}>
-              <View style={sw.sepLine} />
-              <AppText style={sw.sepText}>Accès démo</AppText>
-              <View style={sw.sepLine} />
-            </View>
-
-            {/* Boutons démo */}
-            <View style={sw.demoGrid}>
-              {DEMO_COMPTES.map((item) => (
-                <Pressable
-                  key={item.role}
-                  style={sw.demoBtn}
-                  onPress={() => connecterDemo(item)}
-                  disabled={demoLoading !== null}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name={item.icon as any} size={18} color={item.color} />
-                  <AppText style={[sw.demoBtnText, { color: item.color }]}>
-                    {demoLoading === item.role ? '...' : item.label}
-                  </AppText>
-                </Pressable>
-              ))}
-            </View>
-
-            <Pressable
-              onPress={() => router.push('/debug')}
-              onLongPress={() => { if (ADMIN_ROUTE_SECRET) router.push(`/acces/${ADMIN_ROUTE_SECRET}` as never); }}
-              style={{ marginTop: 16, alignItems: 'center' }}
-            >
-              <AppText style={sw.serverText}>
-                {getBaseUrl().replace(/^https?:\/\//, '') || 'serveur non défini'}
-              </AppText>
-            </Pressable>
-          </ScrollView>
-        </LinearGradient>
-
-        {/* Panneau droit — blanc avec image hero */}
-        <View style={sw.right}>
-          <Image source={HERO} style={sw.heroImg} resizeMode="cover" />
-          <LinearGradient
-            colors={['rgba(248,253,249,0)', 'rgba(248,253,249,0.6)', 'rgba(248,253,249,1)']}
-            style={sw.heroOverlay}
-          />
-          <View style={sw.rightContent}>
-            <AppText style={sw.newHere}>Nouveau ici ?</AppText>
-            <AppText style={sw.newSub}>
-              Rejoignez des milliers de travailleurs et recruteurs au Sénégal.
-            </AppText>
-            <Pressable style={sw.signupBtn} onPress={() => router.push('/register')} accessibilityRole="button">
-              <AppText style={sw.signupBtnText}>Créer un compte</AppText>
-              <Ionicons name="person-add-outline" size={20} color="#1a6b2a" />
-            </Pressable>
+      <View style={w.root}>
+        {/* Gauche — image hero plein panneau */}
+        <View style={w.imagePane}>
+          <Image source={HERO} style={w.heroImg} resizeMode="cover" />
+          <LinearGradient colors={['transparent', 'rgba(10,40,15,0.80)']}
+            style={w.heroGrad} />
+          <View style={w.heroCaption}>
+            <AppText style={w.heroClaim}>« Viens travailler »</AppText>
+            <AppText style={w.heroSub}>XeuySil — Votre plateforme de missions journalières au Sénégal</AppText>
           </View>
         </View>
+
+        {/* Droite — formulaire sur fond blanc */}
+        <ScrollView style={w.formPane}
+          contentContainerStyle={[w.formScroll, { paddingTop: Math.max(insets.top + 32, 48) }]}
+          showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {FormContent}
+        </ScrollView>
       </View>
     );
   }
 
-  // ── Mise en page mobile (inchangée) ────────────────────────────────────────
+  // MOBILE : formulaire seul
   return (
-    <AuthShell title="Bon retour !" subtitle="Connectez-vous pour retrouver vos missions."
-      footer={
-        <>
-          <Button label="Créer un compte" variant="secondary" icon="person-add-outline" large onPress={() => router.push('/register')} />
-          <Pressable onPress={() => router.push('/debug')} onLongPress={() => { if (ADMIN_ROUTE_SECRET) router.push(`/acces/${ADMIN_ROUTE_SECRET}` as never); }}
-            accessibilityRole="button" style={{ alignItems: 'center', padding: 8 }}>
-            <AppText variant="caption" muted>Serveur : {getBaseUrl().replace(/^https?:\/\//, '') || 'non défini'}</AppText>
-          </Pressable>
-        </>
-      }>
-      <TextField label="Adresse e-mail" icon="mail-outline" keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
-        placeholder="nom@exemple.com" value={email} onChangeText={setEmail} error={fe.email} />
-      <TextField label="Mot de passe" icon="lock-closed-outline" secureTextEntry={!show} autoCapitalize="none" value={password} onChangeText={setPassword}
-        error={fe.password} right={<Pressable accessibilityRole="button" accessibilityLabel={show ? 'Masquer' : 'Afficher'} onPress={() => setShow(!show)}><Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={22} color="#5a7260" /></Pressable>} />
-      <Pressable onPress={() => router.push('/forgot-password')} accessibilityRole="link" style={{ alignSelf: 'flex-end', paddingVertical: 4 }}>
-        <AppText color="#1a6b2a">Mot de passe oublié ?</AppText>
-      </Pressable>
-      {error && <ErrorBox message={error.title} code={error.code} />}
-      <Button label="Se connecter" icon="arrow-forward" large loading={loading} onPress={submit} />
-      <View style={[sm.separator, { borderColor: '#d4e8d8' }]}>
-        <View style={[sm.line, { backgroundColor: '#d4e8d8' }]} />
-        <AppText variant="caption" muted style={sm.sepLabel}>Accès démo</AppText>
-        <View style={[sm.line, { backgroundColor: '#d4e8d8' }]} />
-      </View>
-      <View style={sm.demoGrid}>
-        {DEMO_COMPTES.map((item) => (
-          <Pressable key={item.role} style={[sm.demoBtn, { backgroundColor: '#d4f0da', borderColor: '#1a6b2a40' }]}
-            onPress={() => connecterDemo(item)} accessibilityRole="button" disabled={demoLoading !== null}>
-            <Ionicons name={item.icon as any} size={20} color="#1a6b2a" />
-            <AppText variant="caption" color="#1a6b2a" style={{ fontWeight: '600' }}>
-              {demoLoading === item.role ? '...' : item.label}
-            </AppText>
-          </Pressable>
-        ))}
-      </View>
-    </AuthShell>
+    <KeyboardAvoidingView style={m.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={[m.scroll,
+        { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {FormContent}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-// ── Styles web split-screen ───────────────────────────────────────────────────
-const sw = StyleSheet.create({
-  root:        { flex: 1, flexDirection: 'row', width: '100vw' as any, height: '100vh' as any },
-  left:        { flex: 1, maxWidth: 480 },
-  leftScroll:  { paddingHorizontal: 40, paddingBottom: 40 },
-  logoRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 36 },
-  logoImg:     { width: 48, height: 48, borderRadius: 10 },
-  logoName:    { fontSize: 20, fontWeight: '700', color: '#ffffff', fontFamily: 'Helvetica' },
-  logoTagline: { fontSize: 11, color: 'rgba(255,255,255,0.65)', letterSpacing: 1.5, textTransform: 'uppercase' as any, fontFamily: 'Helvetica' },
-  heading:     { fontSize: 32, fontWeight: '800', color: '#ffffff', marginBottom: 6 },
-  sub:         { fontSize: 14, color: 'rgba(255,255,255,0.75)', marginBottom: 28 },
-  form:        { gap: 14 },
-  forgotLink:  { fontSize: 13, color: '#f2b705', textAlign: 'right' as any, marginTop: -6 },
-  loginBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                 backgroundColor: '#f2b705', borderRadius: 999, height: 52, marginTop: 4 },
-  loginBtnText:{ fontSize: 16, fontWeight: '700', color: '#1a6b2a' },
-  sep:         { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 20 },
-  sepLine:     { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
-  sepText:     { fontSize: 12, color: 'rgba(255,255,255,0.55)', letterSpacing: 1 },
-  demoGrid:    { flexDirection: 'row', flexWrap: 'wrap' as any, gap: 8 },
-  demoBtn:     { flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                 gap: 6, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 12,
-                 backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
-  demoBtnText: { fontSize: 13, fontWeight: '600' },
-  serverText:  { fontSize: 10, color: 'rgba(255,255,255,0.3)' },
-  right:       { flex: 1, position: 'relative' as any, backgroundColor: '#f4f8f4' },
-  heroImg:     { position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
-  heroOverlay: { position: 'absolute' as any, bottom: 0, left: 0, right: 0, height: '50%' },
-  rightContent:{ position: 'absolute' as any, bottom: 60, left: 48, right: 48 },
-  newHere:     { fontSize: 36, fontWeight: '800', color: '#0d1f10', marginBottom: 8 },
-  newSub:      { fontSize: 15, color: '#5a7260', marginBottom: 28, lineHeight: 22 },
-  signupBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                 backgroundColor: '#ffffff', borderRadius: 999, height: 52,
-                 borderWidth: 2, borderColor: '#1a6b2a', alignSelf: 'flex-start' as any, paddingHorizontal: 28 },
-  signupBtnText:{ fontSize: 16, fontWeight: '700', color: '#1a6b2a' },
+// Styles formulaire (partagés)
+const f = StyleSheet.create({
+  logoRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 },
+  logoImg:      { width: 48, height: 48, borderRadius: 10 },
+  appName:      { fontSize: 20, fontWeight: '700', color: '#0d1f10' },
+  tagline:      { fontSize: 11, color: '#5a7260', letterSpacing: 1.5, textTransform: 'uppercase' as any },
+  heading:      { fontSize: 30, fontWeight: '800', color: '#0d1f10', marginBottom: 4 },
+  sub:          { fontSize: 14, color: '#5a7260', marginBottom: 24 },
+  fields:       { gap: 12 },
+  forgot:       { fontSize: 13, color: '#1a6b2a', marginTop: -4 },
+  loginBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  gap: 8, backgroundColor: '#1a6b2a', borderRadius: 999, height: 52, marginTop: 20 },
+  loginBtnText: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  sep:          { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
+  sepLine:      { flex: 1, height: 1, backgroundColor: '#d4e8d8' },
+  sepTxt:       { fontSize: 12, color: '#5a7260', letterSpacing: 0.5 },
+  demoGrid:     { flexDirection: 'row', flexWrap: 'wrap' as any, gap: 8 },
+  demoBtn:      { flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center',
+                  justifyContent: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 8,
+                  borderRadius: 12, backgroundColor: '#d4f0da', borderWidth: 1, borderColor: '#1a6b2a30' },
+  demoBtnTxt:   { fontSize: 13, fontWeight: '600', color: '#1a6b2a' },
+  signupRow:    { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+  signupTxt:    { fontSize: 14, color: '#5a7260' },
+  signupLink:   { fontSize: 14, fontWeight: '700', color: '#1a6b2a' },
+  serverTxt:    { fontSize: 10, color: '#5a726040' },
 });
 
-// ── Styles mobile ─────────────────────────────────────────────────────────────
-const sm = StyleSheet.create({
-  separator: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 4 },
-  line:      { flex: 1, height: 1 },
-  sepLabel:  { paddingHorizontal: 4 },
-  demoGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  demoBtn:   { flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-               gap: 6, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 12, borderWidth: 1 },
+// Styles web
+const w = StyleSheet.create({
+  root:       { flex: 1, flexDirection: 'row', width: '100vw' as any, height: '100vh' as any },
+  imagePane:  { flex: 1, position: 'relative' as any, overflow: 'hidden' as any },
+  heroImg:    { position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+  heroGrad:   { position: 'absolute' as any, bottom: 0, left: 0, right: 0, height: '50%' },
+  heroCaption:{ position: 'absolute' as any, bottom: 40, left: 40, right: 40 },
+  heroClaim:  { fontSize: 28, fontWeight: '800', color: '#ffffff', marginBottom: 8 },
+  heroSub:    { fontSize: 14, color: 'rgba(255,255,255,0.80)', lineHeight: 20 },
+  formPane:   { width: 480, backgroundColor: '#f4f8f4' },
+  formScroll: { paddingHorizontal: 48, paddingBottom: 48 },
+});
+
+// Styles mobile
+const m = StyleSheet.create({
+  root:   { flex: 1, backgroundColor: '#f4f8f4' },
+  scroll: { paddingHorizontal: 24 },
 });
