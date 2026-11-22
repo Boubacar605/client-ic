@@ -72,10 +72,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    try { await logoutApi(); } catch { /* hors ligne : on déconnecte quand même */ }
+    // Réinitialiser l'état immédiatement, sans attendre l'API
+    setProfil(null);
+    setStatus('signedOut');
     await tokens.clear();
-    if (typeof window !== 'undefined') window.sessionStorage.removeItem('xs_demo_profil');
-    setProfil(null); setStatus('signedOut');
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem('xs_demo_profil');
+      // Forcer la navigation vers /welcome sur le web
+      if (typeof window.location !== 'undefined') {
+        window.location.href = '/welcome';
+      }
+    }
+    // Appel API en arrière-plan (non bloquant)
+    logoutApi().catch(() => {});
   }, []);
 
   const value = useMemo(() => ({ status, profil, signIn, signInDemo, signOut }), [status, profil, signIn, signInDemo, signOut]);
