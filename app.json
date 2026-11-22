@@ -21,7 +21,27 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "XeuySil",
+      "shortName": "XeuySil",
+      "description": "Trouvez du travail ou des travailleurs journaliers près de chez vous au Sénégal — en moins de 2 heures.",
+      "themeColor": "#1a6b2a",
+      "backgroundColor": "#f4f8f4",
+      "meta": {
+        "og:type":        "website",
+        "og:title":       "XeuySil — Travaillez. Trouvez. Avancez.",
+        "og:description": "Plateforme de mise en relation entre recruteurs et travailleurs journaliers au Sénégal. Maçons, jardiniers, lessiveuses, manutentionnaires — en moins de 2 heures.",
+        "og:image":       "https://xeuysil-client.onrender.com/og-image.png",
+        "og:image:width": "1080",
+        "og:image:height":"1080",
+        "og:url":         "https://xeuysil-client.onrender.com",
+        "og:site_name":   "XeuySil",
+        "og:locale":      "fr_SN",
+        "twitter:card":   "summary",
+        "twitter:title":  "XeuySil — Viens travailler",
+        "twitter:description": "Trouvez du travail ou des travailleurs journaliers au Sénégal.",
+        "twitter:image":  "https://xeuysil-client.onrender.com/og-image.png"
+      }
     },
     "plugins": [
       "expo-router",
