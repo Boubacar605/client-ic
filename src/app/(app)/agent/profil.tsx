@@ -58,7 +58,6 @@ export default function AgentProfile() {
           </>
         ) : <AppText muted>Chargement…</AppText>}
       </Card>
-      <Button label="Diagnostic et serveur" variant="secondary" icon="construct-outline" onPress={() => router.push('/debug')} />
       <Button label="Se déconnecter" icon="log-out-outline" large onPress={signOut} />
     </ScrollView>
   );

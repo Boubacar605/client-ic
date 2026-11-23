@@ -76,7 +76,7 @@ export default function Welcome() {
               locations={[0, 0.45, 1]}
               style={fullScreen}
             />
-            <View style={[s.text, { bottom: insets.bottom + 150 }]}>
+            <View style={[s.text, { bottom: insets.bottom + 220 }]}>
               <AppText variant="display" color="#ffffff">{sl.titre}</AppText>
               <AppText color="rgba(255,255,255,0.88)">{sl.texte}</AppText>
             </View>

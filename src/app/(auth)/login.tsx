@@ -61,13 +61,7 @@ export default function Login() {
   return (
     <AuthShell title="Bon retour !" subtitle="Connectez-vous pour retrouver vos missions."
       footer={
-        <>
-          <Button label="Créer un compte" variant="secondary" icon="person-add-outline" large onPress={() => router.push('/register')} />
-          <Pressable onPress={() => router.push('/debug')} onLongPress={() => { if (ADMIN_ROUTE_SECRET) router.push(`/acces/${ADMIN_ROUTE_SECRET}` as never); }}
-            accessibilityRole="button" style={{ alignItems: 'center', padding: 8 }}>
-            <AppText variant="caption" muted>Serveur : {getBaseUrl().replace(/^https?:\/\//, '') || 'non défini'}</AppText>
-          </Pressable>
-        </>
+        <Button label="Créer un compte" variant="secondary" icon="person-add-outline" large onPress={() => router.push('/register')} />
       }>
       <TextField label="Adresse e-mail" icon="mail-outline" keyboardType="email-address" autoCapitalize="none" autoCorrect={false}
         placeholder="nom@exemple.com" value={email} onChangeText={setEmail} error={fe.email} />

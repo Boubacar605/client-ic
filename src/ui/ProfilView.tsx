@@ -141,7 +141,6 @@ export function ProfilView() {
         <View style={s.row}><Ionicons name="contrast-outline" size={22} color={t.brand} /><AppText variant="label">Apparence</AppText></View>
         <AppText muted>L’application suit le mode clair ou sombre de votre téléphone.</AppText>
       </Card>
-      <Button label="Diagnostic et serveur" variant="secondary" icon="construct-outline" onPress={() => router.push('/debug')} />
       <Button label="Se déconnecter" icon="log-out-outline" large onPress={signOut} />
     </ScrollView>
   );
